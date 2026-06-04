@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "raglab-retrievers"
+version = "0.1.0"
+description = "Retriever implementations for RAGLab"
+requires-python = ">=3.12"
+dependencies = [
+    "raglab-common",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/raglab_retrievers"]
