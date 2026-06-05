@@ -41,3 +41,4 @@ known-first-party = ["raglab_common", "raglab_chunkers", "raglab_retrievers"]
 asyncio_mode = "auto"
 testpaths = ["packages", "services"]
 addopts = "--tb=short -q"
+filterwarnings = ["ignore::DeprecationWarning", "ignore::pytest.PytestUnraisableExceptionWarning"]

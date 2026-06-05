@@ -1,0 +1,351 @@
+version: "3.9"
+
+# RAGLab — docker-compose (development)
+# Bring up infrastructure: docker-compose up -d qdrant postgres rabbitmq
+# Bring up everything:     docker-compose up
+# Rebuild a service:       docker-compose up --build <service>
+
+x-common-env: &common-env
+  RAGLAB_LOG_LEVEL: ${RAGLAB_LOG_LEVEL:-INFO}
+  RAGLAB_JSON_LOGS: ${RAGLAB_JSON_LOGS:-false}
+  RAGLAB_QDRANT_HOST: qdrant
+  RAGLAB_QDRANT_PORT: 6333
+  RAGLAB_POSTGRES_DSN: postgresql+asyncpg://raglab:raglab@postgres:5432/raglab
+  RAGLAB_RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+  # Internal service URLs (container names as hostnames)
+  RAGLAB_INGESTION_URL: http://ingestion:8001
+  RAGLAB_EMBEDDING_URL: http://embedding:8002
+  RAGLAB_INDEXING_URL: http://indexing:8003
+  RAGLAB_RETRIEVAL_URL: http://retrieval:8004
+  RAGLAB_LLM_URL: http://llm:8005
+  RAGLAB_PIPELINE_URL: http://pipeline:8006
+  RAGLAB_CONFIG_URL: http://config:8007
+  RAGLAB_STORAGE_URL: http://storage:8008
+  RAGLAB_UI_URL: http://ui:8009
+  # LLM keys — set in your .env file
+  RAGLAB_AZURE_OPENAI_API_KEY: ${RAGLAB_AZURE_OPENAI_API_KEY:-}
+  RAGLAB_AZURE_OPENAI_ENDPOINT: ${RAGLAB_AZURE_OPENAI_ENDPOINT:-}
+  RAGLAB_AZURE_OPENAI_DEPLOYMENT: ${RAGLAB_AZURE_OPENAI_DEPLOYMENT:-}
+  RAGLAB_OPENAI_API_KEY: ${RAGLAB_OPENAI_API_KEY:-}
+  RAGLAB_ANTHROPIC_API_KEY: ${RAGLAB_ANTHROPIC_API_KEY:-}
+  RAGLAB_OLLAMA_BASE_URL: ${RAGLAB_OLLAMA_BASE_URL:-http://localhost:11434}
+
+x-build-common: &build-common
+  context: .
+  dockerfile: services/${SERVICE_NAME:-api-gateway}/Dockerfile
+
+x-healthcheck-http: &healthcheck-http
+  interval: 15s
+  timeout: 5s
+  retries: 5
+  start_period: 20s
+
+services:
+
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+
+  qdrant:
+    image: qdrant/qdrant:v1.11.3
+    container_name: raglab-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: raglab-postgres
+    environment:
+      POSTGRES_USER: raglab
+      POSTGRES_PASSWORD: raglab
+      POSTGRES_DB: raglab
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raglab -d raglab"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: raglab-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  # ── RAGLab Services ────────────────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: raglab-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: api-gateway
+      RAGLAB_PORT: 8000
+    depends_on:
+      ingestion:
+        condition: service_healthy
+      embedding:
+        condition: service_healthy
+      retrieval:
+        condition: service_healthy
+      llm:
+        condition: service_healthy
+      pipeline:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  ingestion:
+    build:
+      context: .
+      dockerfile: services/ingestion/Dockerfile
+    container_name: raglab-ingestion
+    ports:
+      - "8001:8001"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: ingestion
+      RAGLAB_PORT: 8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  embedding:
+    build:
+      context: .
+      dockerfile: services/embedding/Dockerfile
+    container_name: raglab-embedding
+    ports:
+      - "8002:8002"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: embedding
+      RAGLAB_PORT: 8002
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8002/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  indexing:
+    build:
+      context: .
+      dockerfile: services/indexing/Dockerfile
+    container_name: raglab-indexing
+    ports:
+      - "8003:8003"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: indexing
+      RAGLAB_PORT: 8003
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8003/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  retrieval:
+    build:
+      context: .
+      dockerfile: services/retrieval/Dockerfile
+    container_name: raglab-retrieval
+    ports:
+      - "8004:8004"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: retrieval
+      RAGLAB_PORT: 8004
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8004/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  llm:
+    build:
+      context: .
+      dockerfile: services/llm/Dockerfile
+    container_name: raglab-llm
+    ports:
+      - "8005:8005"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: llm
+      RAGLAB_PORT: 8005
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8005/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: services/pipeline/Dockerfile
+    container_name: raglab-pipeline
+    ports:
+      - "8006:8006"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: pipeline
+      RAGLAB_PORT: 8006
+    depends_on:
+      embedding:
+        condition: service_healthy
+      indexing:
+        condition: service_healthy
+      retrieval:
+        condition: service_healthy
+      llm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8006/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  config:
+    build:
+      context: .
+      dockerfile: services/config/Dockerfile
+    container_name: raglab-config
+    ports:
+      - "8007:8007"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: config
+      RAGLAB_PORT: 8007
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8007/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  storage:
+    build:
+      context: .
+      dockerfile: services/storage/Dockerfile
+    container_name: raglab-storage
+    ports:
+      - "8008:8008"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: storage
+      RAGLAB_PORT: 8008
+    volumes:
+      - storage_data:/app/data/local
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8008/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: .
+      dockerfile: services/ui/Dockerfile
+    container_name: raglab-ui
+    ports:
+      - "8009:8009"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: ui
+      RAGLAB_PORT: 8009
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8009/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  # ── Stub Services (health-check only until their release) ─────────────────
+
+  graph:
+    build:
+      context: .
+      dockerfile: services/graph/Dockerfile
+    container_name: raglab-graph
+    ports:
+      - "8010:8010"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: graph
+      RAGLAB_PORT: 8010
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8010/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  observability:
+    build:
+      context: .
+      dockerfile: services/observability/Dockerfile
+    container_name: raglab-observability
+    ports:
+      - "8011:8011"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: observability
+      RAGLAB_PORT: 8011
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8011/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+  auth:
+    build:
+      context: .
+      dockerfile: services/auth/Dockerfile
+    container_name: raglab-auth
+    ports:
+      - "8012:8012"
+    environment:
+      <<: *common-env
+      RAGLAB_SERVICE_NAME: auth
+      RAGLAB_PORT: 8012
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8012/health || exit 1"]
+      <<: *healthcheck-http
+    restart: unless-stopped
+
+volumes:
+  qdrant_storage:
+  postgres_data:
+  rabbitmq_data:
+  storage_data:

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "raglab-retrieval"
+version = "0.1.0"
+description = "Retriever execution — dense, BM25, hybrid, MMR, re-ranker"
+requires-python = ">=3.12"
+dependencies = [
+    "raglab-common",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "httpx>=0.27",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/retrieval"]
