@@ -40,8 +40,8 @@ raglab/
 
 | Release | Theme | Status |
 |---------|-------|--------|
-| **R1** | Full Shell + Core Pipeline | ✅ Active |
-| R2 | Advanced Chunkers | 🔜 Planned |
+| **R1** | Full Shell + Core Pipeline | ✅ Done |
+| **R2** | **Advanced Chunking + Cloud Storage** | ✅ Done |
 | R3 | Advanced Retrievers | 🔜 Planned |
 | R4 | GraphRAG | 🔜 Planned |
 | R5 | Caching + Performance | 🔜 Planned |

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab R2 — Release Notes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0a0a0f;--surface:#111118;--card:#1c1c25;
+      --gold:#d4a843;--gold-dim:rgba(212,168,67,.12);
+      --text:#f0ede8;--muted:#9a9490;--dim:#5a5650;
+      --green:#3ecf8e;--blue:#5e9cf5;--orange:#f0944d;--red:#f26464;
+      --border:rgba(212,168,67,.15);--border-hi:rgba(212,168,67,.45);
+      --mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--ui:'Space Mono',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:rgba(212,168,67,.3);border-radius:3px}
+
+    .hero{background:linear-gradient(135deg,#0a0a0f 0%,#111118 60%,#0f0f1a 100%);border-bottom:1px solid var(--border);padding:64px 48px 48px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 40%,rgba(212,168,67,.07) 0%,transparent 60%);pointer-events:none}
+    .hero-eyebrow{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+    .hero-title{font-family:var(--display);font-size:clamp(36px,5vw,64px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:16px}
+    .hero-title span{color:var(--gold)}
+    .hero-sub{font-size:15px;color:var(--muted);max-width:560px;margin-bottom:32px}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:20px;font-family:var(--ui);font-size:11px;color:var(--dim)}
+    .hero-meta strong{color:var(--muted)}
+
+    .stats-bar{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+    .stat{flex:1;min-width:130px;padding:20px 24px;border-right:1px solid var(--border)}
+    .stat:last-child{border-right:none}
+    .stat-value{font-family:var(--display);font-size:28px;font-weight:800;color:var(--gold);line-height:1;margin-bottom:4px}
+    .stat-label{font-size:9px;color:var(--dim);font-family:var(--ui);text-transform:uppercase;letter-spacing:.1em}
+
+    .container{max-width:1080px;margin:0 auto;padding:0 48px 80px}
+    .section{padding:48px 0;border-bottom:1px solid var(--border)}
+    .section:last-child{border-bottom:none}
+    .section-label{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+    .section-title{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+    .section-lead{font-size:13px;color:var(--muted);margin-bottom:28px;max-width:640px}
+
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;transition:border-color 150ms}
+    .card:hover{border-color:var(--border-hi)}
+    .badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--ui);font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;margin-bottom:10px;letter-spacing:.07em;text-transform:uppercase}
+    .badge-r2{background:rgba(94,156,245,.12);color:var(--blue);border:1px solid rgba(94,156,245,.25)}
+    .badge-r1{background:rgba(62,207,142,.12);color:var(--green);border:1px solid rgba(62,207,142,.25)}
+    .badge-meta{background:rgba(212,168,67,.12);color:var(--gold);border:1px solid var(--border-hi)}
+    .badge-stub{background:rgba(90,86,80,.12);color:var(--dim);border:1px solid var(--border)}
+    .card-title{font-weight:600;font-size:13px;margin-bottom:6px}
+    .card-desc{font-size:11px;color:var(--muted);line-height:1.6}
+
+    /* Chunker comparison table */
+    .comparison{width:100%;border-collapse:collapse;margin-top:16px;font-size:11px}
+    .comparison th{font-family:var(--ui);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface)}
+    .comparison td{padding:9px 12px;border-bottom:1px solid rgba(212,168,67,.05);vertical-align:top}
+    .comparison tr:last-child td{border-bottom:none}
+    .comparison tr:hover td{background:rgba(212,168,67,.02)}
+    .tag{display:inline-block;padding:1px 5px;border-radius:2px;font-size:9px;font-family:var(--ui);font-weight:700}
+    .tag-r2{background:rgba(94,156,245,.1);color:var(--blue)}
+    .tag-r1{background:rgba(62,207,142,.1);color:var(--green)}
+    .tag-meta{background:rgba(212,168,67,.1);color:var(--gold)}
+
+    /* Pipeline flow */
+    .pipeline{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin:20px 0}
+    .pipe-step{text-align:center;flex:1;min-width:80px}
+    .pipe-icon{width:42px;height:42px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+    .pipe-icon.new{border-color:var(--blue);background:rgba(94,156,245,.08)}
+    .pipe-icon.active{border-color:var(--gold);background:var(--gold-dim)}
+    .pipe-name{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .pipe-tech{font-size:9px;color:var(--dim);margin-top:2px}
+    .pipe-arrow{font-size:14px;color:var(--gold);padding:0 6px;flex-shrink:0}
+
+    /* Code block */
+    .code{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:11px;color:var(--muted);line-height:1.8;overflow-x:auto;white-space:pre}
+    .code .cmd{color:var(--gold)}
+    .code .cmt{color:var(--dim)}
+    .code .key{color:var(--blue)}
+    .code .val{color:var(--green)}
+
+    /* Roadmap */
+    .roadmap{display:flex;flex-direction:column;gap:0}
+    .r-row{display:grid;grid-template-columns:100px 1fr;padding:14px 0;border-bottom:1px solid rgba(212,168,67,.06);align-items:start}
+    .r-tag{font-family:var(--ui);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:2px}
+    .done{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border-hi)}
+    .next{background:rgba(94,156,245,.1);color:var(--blue);border:1px solid rgba(94,156,245,.3)}
+    .later{background:rgba(90,86,80,.1);color:var(--dim);border:1px solid var(--border)}
+    .r-content{padding-left:16px}
+    .r-name{font-weight:600;margin-bottom:2px}
+    .r-desc{font-size:11px;color:var(--muted)}
+
+    .footer{background:var(--surface);border-top:1px solid var(--border);padding:28px 48px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--dim);font-family:var(--ui)}
+    .footer a{color:var(--gold);text-decoration:none}
+
+    @media(max-width:640px){.hero,.container,.footer{padding-left:20px;padding-right:20px}.stats-bar{flex-direction:column}.stat{border-right:none;border-bottom:1px solid var(--border)}}
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Release Notes · June 2026</div>
+  <h1 class="hero-title">RAGLab <span>R2</span></h1>
+  <p class="hero-sub">Advanced Chunking + Cloud Storage. Six chunkers activated, two cloud backends live, 195 new tests — all knobs that were "Coming Soon" in R1 are now live.</p>
+  <div class="hero-meta">
+    <div><strong>raglab-chunkers</strong> v0.3.0</div>
+    <div><strong>storage-service</strong> v0.2.0</div>
+    <div><strong>Builds on</strong> R1 (0.1.0)</div>
+    <div><strong>New tests</strong> 195</div>
+    <div><strong>Total passing</strong> 564</div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-value">6</div><div class="stat-label">Chunkers Activated</div></div>
+  <div class="stat"><div class="stat-value">2</div><div class="stat-label">Cloud Backends</div></div>
+  <div class="stat"><div class="stat-value">195</div><div class="stat-label">New Tests</div></div>
+  <div class="stat"><div class="stat-value">564</div><div class="stat-label">Total Passing</div></div>
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Infra for Tests</div></div>
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Algorithm Duplications</div></div>
+</div>
+
+<div class="container">
+
+<div class="section">
+  <div class="section-label">Architecture</div>
+  <div class="section-title">R2 Additions to the Pipeline</div>
+  <div class="section-lead">Everything R1 shipped still runs. R2 expands what can go in (document types) and where it goes (cloud storage).</div>
+  <div class="pipeline">
+    <div class="pipe-step"><div class="pipe-icon active">📄</div><div class="pipe-name">Ingest</div><div class="pipe-tech">RabbitMQ</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon new">✂️</div>
+      <div class="pipe-name">Chunk</div>
+      <div class="pipe-tech">PDF · DOCX · MD · HTML · Excel · Hybrid</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">🧬</div><div class="pipe-name">Embed</div><div class="pipe-tech">Azure / OpenAI / Anthropic / Ollama</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">📦</div><div class="pipe-name">Index</div><div class="pipe-tech">Qdrant + Postgres</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">🔍</div><div class="pipe-name">Retrieve</div><div class="pipe-tech">DenseRetriever</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">🤖</div><div class="pipe-name">Generate</div><div class="pipe-tech">Multi-LLM</div></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)"><div style="width:12px;height:12px;border-radius:2px;background:rgba(94,156,245,.15);border:1px solid rgba(94,156,245,.4)"></div>New in R2</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)"><div style="width:12px;height:12px;border-radius:2px;background:var(--gold-dim);border:1px solid var(--border-hi)"></div>Active from R1</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Chunkers</div>
+  <div class="section-title">Six Chunkers Activated</div>
+  <div class="section-lead">All call <code>_boundary.split_into_windows()</code> for token+boundary splitting. Zero reimplementation of the boundary backtracking algorithm.</div>
+
+  <table class="comparison">
+    <thead>
+      <tr>
+        <th>Chunker</th>
+        <th>Strategy</th>
+        <th>Structural Unit</th>
+        <th>Key Parameters</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>TextChunker</strong> <span class="tag tag-r1">R1</span></td>
+        <td>Fixed-token + boundary backtrack</td>
+        <td>Full text stream</td>
+        <td>chunk_size, chunk_overlap, boundary_enforcement, tokenizer</td>
+      </tr>
+      <tr>
+        <td><strong>PDFChunker</strong> <span class="tag tag-r2">R2</span></td>
+        <td>PyMuPDF page-aware + boundary backtrack within pages</td>
+        <td>PDF page</td>
+        <td>respect_page_boundary, page_metadata</td>
+      </tr>
+      <tr>
+        <td><strong>DOCXChunker</strong> <span class="tag tag-r2">R2</span></td>
+        <td>Heading-aware + boundary backtrack within sections</td>
+        <td>Heading section</td>
+        <td>preserve_headings, include_heading_in_chunk</td>
+      </tr>
+      <tr>
+        <td><strong>MarkdownChunker</strong> <span class="tag tag-r2">R2</span></td>
+        <td>Header hierarchy + boundary backtrack within sections</td>
+        <td>Header section</td>
+        <td>split_on_headers, header_levels, include_header_in_chunk</td>
+      </tr>
+      <tr>
+        <td><strong>HTMLChunker</strong> <span class="tag tag-r2">R2</span></td>
+        <td>Tag-aware greedy binning + oversized node split</td>
+        <td>Semantic tag node</td>
+        <td>split_tags, strip_scripts_styles, chunk_size_fallback</td>
+      </tr>
+      <tr>
+        <td><strong>ExcelChunker</strong> <span class="tag tag-r2">R2</span></td>
+        <td>Sheet/row/column-aware structured chunking</td>
+        <td>Row group / Column / Cell</td>
+        <td>sheet_strategy, header_rows, row_grouping, include_sheet_name</td>
+      </tr>
+      <tr>
+        <td><strong>HybridChunker</strong> <span class="tag tag-meta">R2 meta</span></td>
+        <td>Structural pass → token window within units</td>
+        <td>Source chunker units</td>
+        <td>structural_first, max_unit_tokens, source_chunker, source_config</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-label">Storage</div>
+  <div class="section-title">Cloud Storage Backends</div>
+  <div class="section-lead">All backends implement the same four-method interface. Swap S3 for Azure Blob with a config change — zero code change.</div>
+  <div class="cards">
+    <div class="card">
+      <div class="badge badge-r1">R1 Active</div>
+      <div class="card-title">LocalStorageBackend</div>
+      <div class="card-desc">Filesystem storage under configurable root. Path traversal guard via <code>resolve()</code> + prefix check. Idempotent delete. Nested directory creation. URI: <code>local://path</code></div>
+    </div>
+    <div class="card">
+      <div class="badge badge-r2">R2 Active</div>
+      <div class="card-title">S3StorageBackend</div>
+      <div class="card-desc">AWS S3 via boto3. Prefix support. <code>NoSuchKey</code> → <code>StorageError('not found')</code>. boto3 imported at module level — fully patchable in tests. URI: <code>s3://bucket/key</code></div>
+    </div>
+    <div class="card">
+      <div class="badge badge-r2">R2 Active</div>
+      <div class="card-title">AzureBlobStorageBackend</div>
+      <div class="card-desc">Azure Blob via azure-storage-blob. Dual auth: connection string or account key. Idempotent delete. <code>ResourceNotFoundError</code> → <code>StorageError</code>. URI: <code>https://account.blob.core.windows.net/…</code></div>
+    </div>
+    <div class="card">
+      <div class="badge badge-stub">Stub · R7</div>
+      <div class="card-title">GCSStorageBackend</div>
+      <div class="card-desc">All methods raise <code>NotImplementedFeatureError("R7")</code>. Registered in factory — available in Control Panel as Coming Soon.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Design Notes</div>
+  <div class="section-title">Key Decisions</div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-title">Reuse rule: zero duplication</div>
+      <div class="card-desc">Every R2 chunker calls <code>_boundary.split_into_windows()</code> for token+boundary splitting. PDFChunker uses it within pages. DOCXChunker uses it within heading sections. MarkdownChunker within header sections. HTMLChunker for oversized nodes. ExcelChunker for oversized row groups. HybridChunker for Pass 2. One algorithm, six callers.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Column context in ExcelChunker</div>
+      <div class="card-desc">The <code>row</code> strategy produces <code>Name: Alice | Age: 30 | City: London</code> rather than <code>Alice,30,London</code>. A retrieved chunk is self-contained — the LLM never sees raw CSV values without knowing what they mean.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Heading context in DOCX/Markdown</div>
+      <div class="card-desc"><code>include_heading_in_chunk=True</code> prepends the section heading to every chunk produced from that section. A chunk retrieved from the middle of a long section retains its section context for downstream generation.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">HybridChunker ≠ HybridRetriever</div>
+      <div class="card-desc">Tested and documented explicitly. <code>HybridChunker</code> = structural splitting + token windowing. <code>HybridRetriever</code> (R3) = dense + sparse retrieval fusion. Completely different concepts. <code>RetrieverFactory.create("hybrid")</code> raises <code>NotImplementedFeatureError</code> — verified in test.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Credential discipline</div>
+      <div class="card-desc">All cloud credentials come from env vars via pydantic-settings with <code>RAGLAB_</code> prefix. No credential is ever accepted as a plain function argument. boto3 and azure-storage-blob are at module level — tests patch the class, never the credentials.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">HybridChunker lazy init</div>
+      <div class="card-desc">Source chunker instantiated via <code>ChunkerFactory.create()</code> on first <code>chunk()</code> call, not in <code>__init__()</code>. Prevents circular import: <code>factory.py</code> imports <code>HybridChunker</code>; if <code>HybridChunker.__init__</code> imported factory, Python would deadlock at module load.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Quick Start</div>
+  <div class="section-title">Using R2 Chunkers</div>
+<div class="code"><span class="cmt"># PDF with page boundaries</span>
+<span class="cmd">chunker = ChunkerFactory.create("pdf", config={</span>
+    <span class="key">"tokenizer"</span>: <span class="val">"word_count"</span>, <span class="key">"chunk_size"</span>: <span class="val">500</span>,
+    <span class="key">"respect_page_boundary"</span>: <span class="val">True</span>, <span class="key">"page_metadata"</span>: <span class="val">True</span>,
+<span class="cmd">})</span>
+<span class="cmd">chunks = chunker.chunk_pdf_bytes(pdf_bytes, doc_id="report-001")</span>
+
+<span class="cmt"># Markdown with H1/H2 splits</span>
+<span class="cmd">chunker = ChunkerFactory.create("markdown", config={</span>
+    <span class="key">"header_levels"</span>: <span class="val">[1, 2]</span>, <span class="key">"include_header_in_chunk"</span>: <span class="val">True</span>,
+<span class="cmd">})</span>
+
+<span class="cmt"># Hybrid: markdown structure + token windowing within sections</span>
+<span class="cmd">chunker = ChunkerFactory.create("hybrid", config={</span>
+    <span class="key">"source_chunker"</span>: <span class="val">"markdown"</span>, <span class="key">"max_unit_tokens"</span>: <span class="val">1000</span>,
+    <span class="key">"chunk_size"</span>: <span class="val">300</span>, <span class="key">"source_config"</span>: {<span class="key">"header_levels"</span>: <span class="val">[1, 2]</span>},
+<span class="cmd">})</span>
+
+<span class="cmt"># Excel with row strategy — column context preserved</span>
+<span class="cmd">chunker = ChunkerFactory.create("excel", config={</span>
+    <span class="key">"sheet_strategy"</span>: <span class="val">"row"</span>, <span class="key">"row_grouping"</span>: <span class="val">5</span>,
+<span class="cmd">})</span>
+<span class="cmd">chunks = chunker.chunk_excel_bytes(xlsx_bytes, doc_id="sheet-001")</span></div>
+</div>
+
+<div class="section">
+  <div class="section-label">Roadmap</div>
+  <div class="section-title">7-Release Plan</div>
+  <div class="roadmap">
+    <div class="r-row"><span class="r-tag done">R1 ✓</span><div class="r-content"><div class="r-name">Full Shell + Core Pipeline</div><div class="r-desc">13 services, TextChunker, DenseRetriever, multi-LLM, async ingestion, Control Panel. 369 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R2 ✓</span><div class="r-content"><div class="r-name">Advanced Chunking + Cloud Storage</div><div class="r-desc">PDFChunker, DOCXChunker, MarkdownChunker, HTMLChunker, ExcelChunker, HybridChunker. S3 + Azure Blob. 564 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag next">R3</span><div class="r-content"><div class="r-name">Advanced Retrievers + CI/CD + Cloud Deploy</div><div class="r-desc">BM25, Hybrid, MMR, Re-ranker, Compression retrievers. FAISS + ChromaDB + Pinecone. GitHub Actions CI/CD.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R4</span><div class="r-content"><div class="r-name">GraphRAG</div><div class="r-desc">Knowledge graph construction via NetworkX + leidenalg. Community detection. Graph-aware retrieval.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R5</span><div class="r-content"><div class="r-name">Caching + Performance</div><div class="r-desc">Semantic caching via Redis. Query result caching. Embedding cache. Latency dashboard.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R6</span><div class="r-content"><div class="r-name">Observability / LLMOps</div><div class="r-desc">Faithfulness + relevance + context recall. LangSmith / Phoenix tracing. Answer quality dashboard.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R7</span><div class="r-content"><div class="r-name">Auth + Multi-tenancy + GCS</div><div class="r-desc">JWT auth, per-tenant isolation, RBAC, GCS backend, auth-service activation.</div></div></div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <div>RAGLab R2 · Built by <a href="https://tamalkundu.com">Tamal Kundu</a> · June 2026</div>
+  <div><a href="https://github.com/tamalkundu007/raglab">GitHub</a> · Python 3.12 · FastAPI · uv · PyMuPDF · python-docx · BeautifulSoup · pandas · boto3 · azure-storage-blob</div>
+</div>
+
+</body>
+</html>
