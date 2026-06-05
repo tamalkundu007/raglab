@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab R1 — Release Notes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f; --surface: #111118; --card: #1c1c25;
+      --gold: #d4a843; --gold-dim: rgba(212,168,67,.15);
+      --text: #f0ede8; --muted: #9a9490; --dim: #5a5650;
+      --green: #3ecf8e; --blue: #5e9cf5; --orange: #f0944d; --red: #f26464;
+      --border: rgba(212,168,67,.15); --border-hi: rgba(212,168,67,.45);
+      --mono: 'JetBrains Mono', monospace;
+      --display: 'Syne', sans-serif;
+      --ui: 'Space Mono', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.7; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #0a0a0f 0%, #111118 60%, #0f0f1a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 64px 48px 48px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(212,168,67,.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-family: var(--ui); font-size: 10px; font-weight: 700;
+      letter-spacing: .2em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 16px;
+    }
+    .hero-title {
+      font-family: var(--display); font-size: clamp(36px, 5vw, 64px);
+      font-weight: 800; line-height: 1.05;
+      color: var(--text); letter-spacing: -.03em;
+      margin-bottom: 16px;
+    }
+    .hero-title span { color: var(--gold); }
+    .hero-sub {
+      font-size: 15px; color: var(--muted); max-width: 560px; margin-bottom: 32px;
+    }
+    .hero-meta {
+      display: flex; flex-wrap: wrap; gap: 20px;
+      font-family: var(--ui); font-size: 11px; color: var(--dim);
+    }
+    .hero-meta strong { color: var(--muted); }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex; flex-wrap: wrap; gap: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat {
+      flex: 1; min-width: 140px;
+      padding: 20px 28px;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-value {
+      font-family: var(--display); font-size: 28px; font-weight: 800;
+      color: var(--gold); line-height: 1; margin-bottom: 4px;
+    }
+    .stat-label { font-size: 10px; color: var(--dim); font-family: var(--ui); text-transform: uppercase; letter-spacing: .1em; }
+
+    /* Layout */
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 48px 80px; }
+
+    /* Section */
+    .section { padding: 48px 0; border-bottom: 1px solid var(--border); }
+    .section:last-child { border-bottom: none; }
+    .section-label {
+      font-family: var(--ui); font-size: 10px; font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 10px;
+    }
+    .section-title {
+      font-family: var(--display); font-size: 24px; font-weight: 700;
+      color: var(--text); letter-spacing: -.02em; margin-bottom: 8px;
+    }
+    .section-lead { font-size: 13px; color: var(--muted); margin-bottom: 28px; max-width: 640px; }
+
+    /* Cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px;
+      transition: border-color 150ms;
+    }
+    .card:hover { border-color: var(--border-hi); }
+    .card-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: var(--ui); font-size: 9px; font-weight: 700;
+      padding: 2px 7px; border-radius: 3px; margin-bottom: 10px;
+      letter-spacing: .07em; text-transform: uppercase;
+    }
+    .badge-active { background: rgba(62,207,142,.12); color: var(--green); border: 1px solid rgba(62,207,142,.25); }
+    .badge-stub   { background: rgba(90,86,80,.12);   color: var(--dim);   border: 1px solid var(--border); }
+    .badge-new    { background: rgba(94,156,245,.12); color: var(--blue);  border: 1px solid rgba(94,156,245,.25); }
+    .card-title { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+    .card-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+    /* Release roadmap */
+    .roadmap { display: flex; flex-direction: column; gap: 0; }
+    .release-row {
+      display: grid; grid-template-columns: 100px 1fr;
+      padding: 14px 0; border-bottom: 1px solid rgba(212,168,67,.06);
+      align-items: start;
+    }
+    .release-tag {
+      font-family: var(--ui); font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 4px; display: inline-block;
+      margin-top: 2px;
+    }
+    .tag-done  { background: var(--gold-dim); color: var(--gold); border: 1px solid var(--border-hi); }
+    .tag-next  { background: rgba(94,156,245,.1); color: var(--blue); border: 1px solid rgba(94,156,245,.3); }
+    .tag-later { background: rgba(90,86,80,.1); color: var(--dim); border: 1px solid var(--border); }
+    .release-content { padding-left: 16px; }
+    .release-name { font-weight: 600; margin-bottom: 2px; }
+    .release-desc { font-size: 11px; color: var(--muted); }
+
+    /* Pipeline diagram */
+    .pipeline {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px; margin: 20px 0;
+    }
+    .pipeline-step {
+      text-align: center; flex: 1; min-width: 100px;
+    }
+    .pipeline-icon {
+      width: 44px; height: 44px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; margin: 0 auto 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .pipeline-icon.active { border-color: var(--gold); background: var(--gold-dim); }
+    .pipeline-step-name { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .pipeline-step-tech { font-size: 9px; color: var(--dim); margin-top: 2px; }
+    .pipeline-arrow {
+      font-size: 16px; color: var(--gold); padding: 0 8px; flex-shrink: 0;
+    }
+
+    /* Test coverage table */
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th {
+      font-family: var(--ui); font-size: 9px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dim); text-align: left; padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 9px 12px; border-bottom: 1px solid rgba(212,168,67,.05); font-size: 12px; }
+    tr:last-child td { border-bottom: none; }
+    .num { font-family: var(--ui); color: var(--gold); }
+    .ok { color: var(--green); }
+
+    /* Code block */
+    .code {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; font-size: 11px;
+      color: var(--muted); line-height: 1.8; overflow-x: auto;
+      white-space: pre;
+    }
+    .code .cmd { color: var(--gold); }
+    .code .cmt { color: var(--dim); }
+
+    /* Chip */
+    .chip {
+      display: inline-flex; padding: 1px 6px; border-radius: 3px;
+      font-family: var(--ui); font-size: 9px; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+    }
+    .chip-r1 { background: rgba(62,207,142,.1); color: var(--green); border: 1px solid rgba(62,207,142,.2); }
+    .chip-soon { background: rgba(90,86,80,.1); color: var(--dim); border: 1px solid var(--border); }
+
+    /* Footer */
+    .footer {
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 32px 48px; display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 16px;
+      font-size: 11px; color: var(--dim); font-family: var(--ui);
+    }
+    .footer a { color: var(--gold); text-decoration: none; }
+
+    @media (max-width: 640px) {
+      .hero, .container, .footer { padding-left: 20px; padding-right: 20px; }
+      .stats-bar { flex-direction: column; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <div class="hero-eyebrow">Release Notes · June 2026</div>
+  <h1 class="hero-title">RAGLab <span>R1</span></h1>
+  <p class="hero-sub">Full Shell + Core Pipeline. A configurable RAG platform shipped as a uv monorepo of 13 microservices, end-to-end in one release.</p>
+  <div class="hero-meta">
+    <div><strong>Version</strong> 0.1.0</div>
+    <div><strong>Theme</strong> Full Shell + Core Pipeline</div>
+    <div><strong>Python</strong> 3.12+</div>
+    <div><strong>Services</strong> 13</div>
+    <div><strong>Tests</strong> 369 passing</div>
+  </div>
+</div>
+
+<!-- ── Stats bar ── -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-value">13</div><div class="stat-label">Microservices</div></div>
+  <div class="stat"><div class="stat-value">369</div><div class="stat-label">Tests Passing</div></div>
+  <div class="stat"><div class="stat-value">7</div><div class="stat-label">Release Roadmap</div></div>
+  <div class="stat"><div class="stat-value">3</div><div class="stat-label">Internal Packages</div></div>
+  <div class="stat"><div class="stat-value">12</div><div class="stat-label">E2E Contracts</div></div>
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Infra Required for Tests</div></div>
+</div>
+
+<div class="container">
+
+<!-- ── Pipeline ── -->
+<div class="section">
+  <div class="section-label">Architecture</div>
+  <div class="section-title">R1 Active Pipeline</div>
+  <div class="section-lead">Every component is configurable via the Control Panel. Swap any layer without changing code — it's all configuration.</div>
+
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="pipeline-icon active">📄</div>
+      <div class="pipeline-step-name">Ingest</div>
+      <div class="pipeline-step-tech">RabbitMQ + Idempotency</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step">
+      <div class="pipeline-icon active">✂️</div>
+      <div class="pipeline-step-name">Chunk</div>
+      <div class="pipeline-step-tech">TextChunker + Boundary</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step">
+      <div class="pipeline-icon active">🧬</div>
+      <div class="pipeline-step-name">Embed</div>
+      <div class="pipeline-step-tech">Azure / OpenAI / Anthropic / Ollama</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step">
+      <div class="pipeline-icon active">📦</div>
+      <div class="pipeline-step-name">Index</div>
+      <div class="pipeline-step-tech">Qdrant + Postgres</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step">
+      <div class="pipeline-icon active">🔍</div>
+      <div class="pipeline-step-name">Retrieve</div>
+      <div class="pipeline-step-tech">DenseRetriever</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step">
+      <div class="pipeline-icon active">🤖</div>
+      <div class="pipeline-step-name">Generate</div>
+      <div class="pipeline-step-tech">Multi-LLM</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── What shipped ── -->
+<div class="section">
+  <div class="section-label">What Shipped</div>
+  <div class="section-title">R1 Delivered Components</div>
+  <div class="section-lead">Active in production. Every component wired, tested, and versioned.</div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">raglab-common v0.1.0</div>
+      <div class="card-desc">Shared Pydantic v2 models (Chunk, Document, Embedding, Query, Response, Health), async SQLAlchemy engine, structlog logging, pydantic-settings with RAGLAB_ prefix, RabbitMQ message schemas.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">raglab-chunkers v0.2.0</div>
+      <div class="card-desc">BaseChunker + ChunkerFactory + TextChunker. Fixed-token chunking with sentence boundary backtracking. Shared <code>_boundary.split_into_windows()</code> reused by all R2+ chunkers. 73 tests.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">raglab-retrievers v0.2.0</div>
+      <div class="card-desc">BaseRetriever + RetrieverFactory + DenseRetriever. Cosine similarity via Qdrant. <code>_build_filter()</code> converts metadata_filter to Qdrant must-conditions. 50 tests.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">ingestion-service</div>
+      <div class="card-desc">POST /ingest with idempotency key (SHA256 or caller-supplied). RabbitMQPublisher with publisher confirms. Duplicate detection via Postgres. Dead letter queue topology declared at startup.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">embedding-service</div>
+      <div class="card-desc">AzureOpenAIEmbedder (batch API with index-sort), OpenAIEmbedder, OllamaEmbedder, VertexEmbedder stub. POST /embed + /embed/batch. All providers loaded at startup, missing creds skipped.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">indexing-service</div>
+      <div class="card-desc">QdrantIndexer with idempotent ensure_collection. Full ChunkModel payload stored in Qdrant. DocumentRecord + ChunkRecord ORM models in Postgres. POST /index → ensure → upsert → write.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">retrieval-service</div>
+      <div class="card-desc">POST /retrieve: embed query via embedding-service HTTP → DenseRetriever → ranked ChunkModel list. Cached embedder pattern (embed once, reuse). Stub retrievers return 400 with release info.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">llm-service</div>
+      <div class="card-desc">AzureOpenAIProvider, OpenAIProvider, AnthropicProvider, OllamaProvider, VertexProvider stub. BaseLLMProvider: context numbering, 12k char truncation, timing. POST /generate → ResponseModel.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">pipeline-service</div>
+      <div class="card-desc">RabbitMQConsumer with prefetch=1. Full pipeline runner: local read → TextChunker → embed HTTP → index HTTP. Retry with incremented retry_count up to MAX_RETRIES=3, then DLQMessage.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">api-gateway</div>
+      <div class="card-desc">HealthRegistry: async TTL-cached polling of all 12 services. Health-aware routing: 503 before proxy if service unavailable. Strips hop-by-hop headers. 13 proxy routes under /api/v1.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-active">Active · R1</div>
+      <div class="card-title">ui-service (Control Panel)</div>
+      <div class="card-desc">Dark industrial Jinja2 + vanilla JS. 5 routed pages. All knobs for all 7 releases — R2+ greyed with "Coming Soon" pills. Config Library with localStorage. Health dashboard. Query + Ingest pages.</div>
+    </div>
+    <div class="card">
+      <div class="card-badge badge-stub">Stub · R4/R6/R7</div>
+      <div class="card-title">graph / observability / auth</div>
+      <div class="card-desc">Scaffolded and health-check ready. Return activates_in field on root. Docker Compose health checks pass. UI nav items visible, disabled.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Test Coverage ── -->
+<div class="section">
+  <div class="section-label">Quality</div>
+  <div class="section-title">Test Coverage by Layer</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Tests</th>
+        <th>Strategy</th>
+        <th>Infra Required</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>raglab-common (models, exceptions, logging)</td><td class="num">23</td><td>Unit — no deps</td><td class="ok">None</td></tr>
+      <tr><td>raglab-chunkers (boundary, TextChunker, factory)</td><td class="num">73</td><td>Unit — word_count mode</td><td class="ok">None</td></tr>
+      <tr><td>raglab-retrievers (DenseRetriever, factory)</td><td class="num">50</td><td>Unit — mock vector store</td><td class="ok">None</td></tr>
+      <tr><td>ingestion-service (publisher, router, idempotency)</td><td class="num">23</td><td>Unit — mock aio-pika</td><td class="ok">None</td></tr>
+      <tr><td>embedding-service (4 providers + endpoints)</td><td class="num">23</td><td>Unit — mock openai/httpx</td><td class="ok">None</td></tr>
+      <tr><td>indexing-service (QdrantIndexer, ORM, endpoints)</td><td class="num">22</td><td>Unit — mock qdrant-client</td><td class="ok">None</td></tr>
+      <tr><td>retrieval-service (endpoint, embed+retrieve flow)</td><td class="num">10</td><td>Unit — mock Qdrant + HTTP</td><td class="ok">None</td></tr>
+      <tr><td>llm-service (4 providers + endpoints)</td><td class="num">25</td><td>Unit — mock SDKs</td><td class="ok">None</td></tr>
+      <tr><td>pipeline-service (runner, consumer, ack/nack/DLQ)</td><td class="num">16</td><td>Unit — mock AMQP + HTTP</td><td class="ok">None</td></tr>
+      <tr><td>api-gateway (registry, proxy, all routes)</td><td class="num">33</td><td>Unit — mock httpx</td><td class="ok">None</td></tr>
+      <tr><td>ui-service (HTML content, all sections)</td><td class="num">21</td><td>Unit — HTML assertions</td><td class="ok">None</td></tr>
+      <tr><td>13 service health/root endpoints</td><td class="num">26</td><td>Smoke — TestClient</td><td class="ok">None</td></tr>
+      <tr><td>E2E pipeline (12 contracts)</td><td class="num">36</td><td>Integration — in-process</td><td class="ok">None</td></tr>
+      <tr style="background: rgba(212,168,67,.04)"><td><strong>Total</strong></td><td class="num"><strong>369</strong></td><td><strong>3 skipped (tiktoken BPE)</strong></td><td class="ok"><strong>Zero</strong></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Quick start ── -->
+<div class="section">
+  <div class="section-label">Get Started</div>
+  <div class="section-title">Running R1 Locally</div>
+
+  <div class="code"><span class="cmt"># 1. Clone and configure</span>
+<span class="cmd">git clone https://github.com/tamalkundu007/raglab.git && cd raglab</span>
+<span class="cmd">cp .env.example .env</span>
+<span class="cmt">   # Edit .env: set RAGLAB_AZURE_OPENAI_API_KEY, RAGLAB_AZURE_OPENAI_ENDPOINT,</span>
+<span class="cmt">   # RAGLAB_AZURE_OPENAI_CHAT_DEPLOYMENT, RAGLAB_AZURE_OPENAI_EMBEDDING_DEPLOYMENT</span>
+
+<span class="cmt"># 2. Start infrastructure</span>
+<span class="cmd">docker-compose up -d qdrant postgres rabbitmq</span>
+
+<span class="cmt"># 3. Start all services</span>
+<span class="cmd">docker-compose up</span>
+
+<span class="cmt"># 4. Open Control Panel</span>
+<span class="cmd">open http://localhost:8009</span>
+
+<span class="cmt"># 5. API Gateway (all routes)</span>
+<span class="cmd">open http://localhost:8000/docs</span>
+
+<span class="cmt"># Run tests (zero infra needed)</span>
+<span class="cmd">uv run pytest packages/ services/ tests/ -q</span></div>
+</div>
+
+<!-- ── Roadmap ── -->
+<div class="section">
+  <div class="section-label">What's Next</div>
+  <div class="section-title">7-Release Roadmap</div>
+
+  <div class="roadmap">
+    <div class="release-row">
+      <span class="release-tag tag-done">R1 ✓</span>
+      <div class="release-content">
+        <div class="release-name">Full Shell + Core Pipeline</div>
+        <div class="release-desc">13 services scaffolded. TextChunker → Dense → Qdrant → Multi-LLM. Async ingestion with idempotency + DLQ. Control Panel UI. 369 tests.</div>
+      </div>
+    </div>
+    <div class="release-row">
+      <span class="release-tag tag-next">R2</span>
+      <div class="release-content">
+        <div class="release-name">Advanced Chunking + Cloud Storage</div>
+        <div class="release-desc">PDFChunker, DOCXChunker, MarkdownChunker, HTMLChunker, ExcelChunker. Hybrid chunking meta-strategy. S3 + Azure Blob storage backends.</div>
+      </div>
+    </div>
+    <div class="release-row">
+      <span class="release-tag tag-later">R3</span>
+      <div class="release-content">
+        <div class="release-name">Advanced Retrievers + CI/CD</div>
+        <div class="release-desc">BM25, Hybrid, MMR, Re-ranker, Compression retrievers. FAISS + ChromaDB + Pinecone vector stores. GitHub Actions CI/CD. Cloud deployment.</div>
+      </div>
+    </div>
+    <div class="release-row">
+      <span class="release-tag tag-later">R4</span>
+      <div class="release-content">
+        <div class="release-name">GraphRAG</div>
+        <div class="release-desc">Knowledge graph construction via NetworkX + leidenalg. Community detection. Graph-aware retrieval. Activates the graph-service stub.</div>
+      </div>
+    </div>
+    <div class="release-row">
+      <span class="release-tag tag-later">R5</span>
+      <div class="release-content">
+        <div class="release-name">Caching + Performance</div>
+        <div class="release-desc">Semantic caching via Redis. Query result caching. Embedding cache. Latency dashboard. Batch query API.</div>
+      </div>
+    </div>
+    <div class="release-row">
+      <span class="release-tag tag-later">R6</span>
+      <div class="release-content">
+        <div class="release-name">Observability / LLMOps</div>
+        <div class="release-desc">Faithfulness + relevance + context recall evaluation. LangSmith / Phoenix tracing. Answer quality dashboard. Activates the observability-service stub.</div>
+      </div>
+    </div>
+    <div class="release-row">
+      <span class="release-tag tag-later">R7</span>
+      <div class="release-content">
+        <div class="release-name">Auth + Multi-tenancy + GCS</div>
+        <div class="release-desc">JWT authentication. Per-tenant collection isolation. RBAC. GCS storage backend. Activates the auth-service stub.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  <div>RAGLab R1 · Built by <a href="https://tamalkundu.com">Tamal Kundu</a> · June 2026</div>
+  <div>
+    <a href="https://github.com/tamalkundu007/raglab">GitHub</a> ·
+    Python 3.12 · FastAPI · uv · Qdrant · PostgreSQL · RabbitMQ
+  </div>
+</div>
+
+</body>
+</html>
