@@ -1,47 +1,79 @@
 """
-llm — LLM provider abstraction — Azure OpenAI, OpenAI, Anthropic, Ollama.
+llm-service — multi-provider LLM generation for RAGLab.
 
-Exposes:
-  GET  /health  — liveness + dependency status
-  GET  /        — service info
+Lifespan: loads all configured providers at startup, skips on missing creds.
 
-Full implementation: see service-specific routers (added per phase).
+Endpoints:
+  GET  /health      — liveness + loaded provider list
+  GET  /            — service info
+  POST /generate    — RAG generation
+  GET  /providers   — available providers
 """
 
-from fastapi import FastAPI
-from raglab_common.logging import configure_logging, get_logger
-from raglab_common.models import HealthModel
-from raglab_common.settings import BaseServiceSettings
+from __future__ import annotations
 
-settings = BaseServiceSettings()
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from fastapi import FastAPI
+
+from raglab_common.logging import configure_logging, get_logger
+from raglab_common.models import HealthModel, LLMProvider
+from llm.providers import get_llm_provider
+from llm.routers.generate import router as generate_router
+from llm.settings import LLMSettings
+
+settings = LLMSettings()
 configure_logging(level=settings.log_level, json_logs=settings.json_logs)
 log = get_logger(__name__)
 
+ACTIVE_PROVIDERS = [
+    LLMProvider.AZURE_OPENAI,
+    LLMProvider.OPENAI,
+    LLMProvider.ANTHROPIC,
+    LLMProvider.OLLAMA,
+]
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    app.state.settings = settings
+    app.state.providers = {}
+    for provider in ACTIVE_PROVIDERS:
+        try:
+            p = get_llm_provider(provider, settings)
+            app.state.providers[provider.value] = p
+            log.info("llm.provider_loaded", provider=provider.value)
+        except Exception as exc:
+            log.warning("llm.provider_skipped", provider=provider.value, reason=str(exc))
+    log.info("service.started", service="llm", port=settings.port,
+             loaded=list(app.state.providers.keys()))
+    yield
+    log.info("service.shutdown", service="llm")
+
+
 app = FastAPI(
     title="raglab-llm",
-    description="LLM provider abstraction — Azure OpenAI, OpenAI, Anthropic, Ollama",
+    description="Multi-provider LLM generation for RAGLab.",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
-
-@app.on_event("startup")  # noqa: deprecated
-async def _startup() -> None:
-    log.info("service.started", service="llm", port=8005)
+app.include_router(generate_router)
 
 
 @app.get("/health", response_model=HealthModel)
 async def health() -> HealthModel:
-    """Liveness check. Extended dependency checks added per phase."""
-    return HealthModel(service="llm")
+    loaded = getattr(app.state, "providers", {})
+    return HealthModel(
+        service="llm",
+        status="ok" if loaded else "degraded",
+        dependencies={p: "ok" for p in loaded},
+    )
 
 
 @app.get("/")
 async def root() -> dict:
-    return {
-        "service": "llm",
-        "version": "0.1.0",
-        "release": "R1",
-        "docs": "/docs",
-    }
+    return {"service": "llm", "version": "0.1.0", "release": "R1", "docs": "/docs"}

@@ -5,13 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "raglab-llm"
 version = "0.1.0"
-description = "LLM provider abstraction — Azure OpenAI, OpenAI, Anthropic, Ollama"
+description = "Multi-provider LLM generation for RAGLab"
 requires-python = ">=3.12"
 dependencies = [
     "raglab-common",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "httpx>=0.27",
+    "openai>=1.50",
+    "anthropic>=0.40",
 ]
 
 [tool.hatch.build.targets.wheel]
