@@ -9,9 +9,13 @@ description = "Qdrant vector indexing and PostgreSQL metadata persistence"
 requires-python = ">=3.12"
 dependencies = [
     "raglab-common",
+    "raglab-retrievers",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "httpx>=0.27",
+    "qdrant-client>=1.11",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.29",
 ]
 
 [tool.hatch.build.targets.wheel]
