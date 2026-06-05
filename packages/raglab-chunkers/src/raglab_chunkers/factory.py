@@ -21,6 +21,7 @@ from raglab_chunkers.docx_chunker import DOCXChunker
 from raglab_chunkers.markdown_chunker import MarkdownChunker
 from raglab_chunkers.html_chunker import HTMLChunker
 from raglab_chunkers.excel_chunker import ExcelChunker
+from raglab_chunkers.hybrid_chunker import HybridChunker
 
 log = get_logger(__name__)
 
@@ -55,6 +56,8 @@ _REGISTRY: dict[str, type[BaseChunker]] = {
     ChunkerType.MARKDOWN:     MarkdownChunker,
     ChunkerType.HTML:         HTMLChunker,
     ChunkerType.EXCEL:        ExcelChunker,
+    # R2 meta-strategy
+    "hybrid":            HybridChunker,
     # R2 stubs
     ChunkerType.PDF_IMAGES:   _make_stub("pdf_images",   "R2-extended"),
     ChunkerType.TABLE_STITCH: _make_stub("table_stitch", "R2-extended"),
@@ -64,6 +67,7 @@ _ACTIVE_TYPES = {
     ChunkerType.TEXT, ChunkerType.PDF, ChunkerType.DOCX,
     ChunkerType.MARKDOWN, ChunkerType.HTML, ChunkerType.EXCEL,
 }
+_ACTIVE_STRINGS = {"hybrid"}  # meta-types not in ChunkerType enum
 
 
 class ChunkerFactory:
@@ -80,7 +84,10 @@ class ChunkerFactory:
     def available(cls) -> list[dict[str, Any]]:
         result = []
         for key, cls_ref in _REGISTRY.items():
-            is_active = ChunkerType(key) in _ACTIVE_TYPES
+            try:
+                is_active = ChunkerType(key) in _ACTIVE_TYPES
+            except ValueError:
+                is_active = key in _ACTIVE_STRINGS
             entry: dict[str, Any] = {"type": key, "active": is_active}
             if not is_active:
                 try:
