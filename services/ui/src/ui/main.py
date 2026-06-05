@@ -1,47 +1,53 @@
 """
-ui — Control Panel UI — Jinja2 + Alpine.js.
+ui-service — RAGLab Control Panel.
 
-Exposes:
-  GET  /health  — liveness + dependency status
-  GET  /        — service info
+Serves the Jinja2 Control Panel template. All API calls from the UI
+go to the api-gateway — the ui-service has no business logic.
 
-Full implementation: see service-specific routers (added per phase).
+Endpoints:
+  GET  /         — Control Panel HTML
+  GET  /health   — liveness
 """
 
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
 from raglab_common.logging import configure_logging, get_logger
 from raglab_common.models import HealthModel
-from raglab_common.settings import BaseServiceSettings
+from ui.routers.pages import router as pages_router
+from ui.settings import UISettings
 
-settings = BaseServiceSettings()
+settings = UISettings()
 configure_logging(level=settings.log_level, json_logs=settings.json_logs)
 log = get_logger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    app.state.settings = settings
+    log.info("service.started", service="ui", port=settings.port, gateway=settings.gateway_url)
+    yield
+    log.info("service.shutdown", service="ui")
+
+
 app = FastAPI(
-    title="raglab-ui",
-    description="Control Panel UI — Jinja2 + Alpine.js",
+    title="RAGLab UI",
+    description="RAGLab Control Panel — configurable RAG platform.",
     version="0.1.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    lifespan=lifespan,
+    # Docs disabled — this service only serves the UI
+    docs_url=None,
+    redoc_url=None,
 )
 
-
-@app.on_event("startup")  # noqa: deprecated
-async def _startup() -> None:
-    log.info("service.started", service="ui", port=8009)
+app.include_router(pages_router)
 
 
 @app.get("/health", response_model=HealthModel)
 async def health() -> HealthModel:
-    """Liveness check. Extended dependency checks added per phase."""
-    return HealthModel(service="ui")
-
-
-@app.get("/")
-async def root() -> dict:
-    return {
-        "service": "ui",
-        "version": "0.1.0",
-        "release": "R1",
-        "docs": "/docs",
-    }
+    return HealthModel(service="ui", status="ok")

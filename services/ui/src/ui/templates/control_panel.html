@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab — Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────────────── */
+    :root {
+      --bg-base:       #0a0a0f;
+      --bg-surface:    #111118;
+      --bg-elevated:   #18181f;
+      --bg-card:       #1c1c25;
+
+      --gold:          #d4a843;
+      --gold-dim:      #a07828;
+      --gold-glow:     rgba(212,168,67,0.18);
+      --gold-glow-sm:  rgba(212,168,67,0.08);
+
+      --text-primary:  #f0ede8;
+      --text-secondary:#9a9490;
+      --text-muted:    #5a5650;
+      --text-disabled: #3a3830;
+
+      --border:        rgba(212,168,67,0.15);
+      --border-hover:  rgba(212,168,67,0.35);
+      --border-active: rgba(212,168,67,0.60);
+
+      --accent-green:  #3ecf8e;
+      --accent-red:    #f26464;
+      --accent-blue:   #5e9cf5;
+      --accent-orange: #f0944d;
+
+      --font-mono:    'JetBrains Mono', monospace;
+      --font-display: 'Syne', sans-serif;
+      --font-ui:      'Space Mono', monospace;
+
+      --radius-sm:    4px;
+      --radius-md:    8px;
+      --radius-lg:    12px;
+
+      --transition:   150ms ease;
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Scrollbar ─────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+    /* ── Layout ────────────────────────────────────────────────────────── */
+    .shell {
+      display: grid;
+      grid-template-rows: 56px 1fr;
+      grid-template-columns: 220px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Topbar ────────────────────────────────────────────────────────── */
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 800;
+      letter-spacing: -0.02em; color: var(--gold);
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: var(--gold);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: var(--bg-base); font-weight: 800;
+    }
+    .logo-sub {
+      font-family: var(--font-ui);
+      font-size: 10px; font-weight: 400;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .topbar-spacer { flex: 1; }
+    .release-badge {
+      font-family: var(--font-ui);
+      font-size: 10px; font-weight: 700;
+      padding: 3px 8px;
+      background: var(--gold-glow);
+      border: 1px solid var(--border-active);
+      border-radius: var(--radius-sm);
+      color: var(--gold);
+      letter-spacing: 0.1em;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+    /* ── Sidebar ────────────────────────────────────────────────────────── */
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 0;
+      position: sticky; top: 56px;
+      height: calc(100vh - 56px);
+      overflow-y: auto;
+    }
+    .nav-section { padding: 4px 0; }
+    .nav-label {
+      font-family: var(--font-ui);
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 12px 20px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 20px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all var(--transition);
+      border-left: 2px solid transparent;
+    }
+    .nav-item:hover { color: var(--text-primary); background: var(--gold-glow-sm); }
+    .nav-item.active {
+      color: var(--gold);
+      border-left-color: var(--gold);
+      background: var(--gold-glow-sm);
+    }
+    .nav-icon { width: 14px; opacity: 0.7; }
+    .nav-badge {
+      margin-left: auto;
+      font-size: 9px; padding: 1px 5px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-muted);
+    }
+    .nav-badge.soon {
+      color: var(--gold-dim);
+      border-color: rgba(212,168,67,0.2);
+    }
+
+    /* ── Main content ───────────────────────────────────────────────────── */
+    .main { padding: 28px; overflow-y: auto; }
+
+    /* ── Page header ────────────────────────────────────────────────────── */
+    .page-header { margin-bottom: 28px; }
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+    .page-subtitle {
+      font-size: 12px; color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ── Section ────────────────────────────────────────────────────────── */
+    .section { margin-bottom: 28px; }
+    .section-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title {
+      font-family: var(--font-ui);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--gold);
+    }
+    .section-release {
+      font-size: 9px; padding: 1px 6px;
+      border-radius: 3px;
+      font-family: var(--font-ui);
+    }
+    .section-release.r1 { background: rgba(62,207,142,.12); color: var(--accent-green); border: 1px solid rgba(62,207,142,.25); }
+    .section-release.stub { background: rgba(90,86,80,.12); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ── Grid layouts ───────────────────────────────────────────────────── */
+    .knobs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .knobs-grid-wide {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 12px;
+    }
+
+    /* ── Knob card ──────────────────────────────────────────────────────── */
+    .knob {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      transition: border-color var(--transition);
+    }
+    .knob:hover { border-color: var(--border-hover); }
+    .knob.disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+    .knob-label {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .knob-label .coming-soon-pill {
+      font-size: 8px; padding: 1px 5px;
+      background: rgba(90,86,80,.2);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text-muted);
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Form controls ──────────────────────────────────────────────────── */
+    select, input[type="text"], input[type="number"], textarea {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color var(--transition);
+      appearance: none;
+    }
+    select:focus, input:focus, textarea:focus {
+      border-color: var(--border-active);
+      box-shadow: 0 0 0 2px var(--gold-glow);
+    }
+    select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23d4a843'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    select option { background: var(--bg-elevated); }
+
+    /* Toggle switch */
+    .toggle-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+    }
+    .toggle-row span { font-size: 12px; color: var(--text-secondary); }
+    .toggle {
+      width: 36px; height: 20px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      position: relative;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--gold); border-color: var(--gold); }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: all var(--transition);
+    }
+    .toggle.on::after { left: 19px; background: var(--bg-base); }
+
+    /* Range slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 3px;
+      background: var(--bg-elevated);
+      border-radius: 2px;
+      outline: none;
+      border: none;
+      padding: 0;
+      margin-top: 6px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--gold);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--gold-glow);
+    }
+    .range-labels {
+      display: flex; justify-content: space-between;
+      font-size: 9px; color: var(--text-muted);
+      margin-top: 3px;
+    }
+    .range-value {
+      font-family: var(--font-ui);
+      font-size: 11px; color: var(--gold);
+      text-align: right;
+      margin-top: 2px;
+    }
+
+    /* ── Buttons ────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-ui);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all var(--transition);
+      border: 1px solid transparent;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--gold);
+      color: var(--bg-base);
+      border-color: var(--gold);
+    }
+    .btn-primary:hover { background: #e8bb55; box-shadow: 0 0 16px var(--gold-glow); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--gold);
+      border-color: var(--border-active);
+    }
+    .btn-secondary:hover { background: var(--gold-glow-sm); border-color: var(--gold); }
+    .btn-ghost {
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { color: var(--text-primary); border-color: var(--border-hover); }
+    .btn-danger {
+      background: transparent;
+      color: var(--accent-red);
+      border-color: rgba(242,100,100,.3);
+    }
+    .btn-danger:hover { background: rgba(242,100,100,.1); }
+    .btn:disabled { opacity: 0.4; pointer-events: none; }
+
+    /* ── Status chips ───────────────────────────────────────────────────── */
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-family: var(--font-ui);
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .chip-ok    { background: rgba(62,207,142,.12); color: var(--accent-green); border: 1px solid rgba(62,207,142,.25); }
+    .chip-warn  { background: rgba(240,148,77,.12); color: var(--accent-orange); border: 1px solid rgba(240,148,77,.25); }
+    .chip-error { background: rgba(242,100,100,.12); color: var(--accent-red); border: 1px solid rgba(242,100,100,.25); }
+    .chip-muted { background: rgba(90,86,80,.12); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ── Cards ──────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    /* ── Tabs ───────────────────────────────────────────────────────────── */
+    .tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .tab {
+      padding: 8px 16px;
+      font-family: var(--font-ui);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all var(--transition);
+    }
+    .tab:hover { color: var(--text-secondary); }
+    .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    /* ── Code / mono blocks ─────────────────────────────────────────────── */
+    .code-block {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.7;
+    }
+
+    /* ── Output panel ───────────────────────────────────────────────────── */
+    .output-panel {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      min-height: 120px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-primary);
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+    .output-panel.loading { color: var(--text-muted); font-style: italic; }
+
+    /* ── Health grid ────────────────────────────────────────────────────── */
+    .health-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .health-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .health-name {
+      font-family: var(--font-ui);
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .health-url { font-size: 10px; color: var(--text-muted); }
+    .health-ms { font-size: 10px; color: var(--text-muted); }
+
+    /* ── Divider ────────────────────────────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* ── Spinner ────────────────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ──────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-active);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--text-primary);
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 300ms ease;
+      z-index: 999;
+      max-width: 360px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Page visibility ─────────────────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .main { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell" id="app">
+
+  <!-- ── Topbar ── -->
+  <header class="topbar">
+    <a class="logo" href="#" onclick="showPage('control-panel')">
+      <div class="logo-icon">R</div>
+      <div>
+        RAGLab
+        <div class="logo-sub">Control Panel</div>
+      </div>
+    </a>
+    <div class="topbar-spacer"></div>
+    <span class="release-badge">Release 1</span>
+    <div class="status-dot" id="global-status-dot" title="System status"></div>
+  </header>
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Core</div>
+      <div class="nav-item active" onclick="showPage('control-panel', this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
+          <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
+        </svg>
+        Control Panel
+      </div>
+      <div class="nav-item" onclick="showPage('query', this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/>
+        </svg>
+        Query
+      </div>
+      <div class="nav-item" onclick="showPage('ingest', this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M8 2v8M4 6l4-4 4 4"/><path d="M2 12h12v2H2z"/>
+        </svg>
+        Ingest
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Inspect</div>
+      <div class="nav-item" onclick="showPage('chunk-inspector', this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="1" y="3" width="14" height="2" rx="1"/>
+          <rect x="1" y="7" width="10" height="2" rx="1"/>
+          <rect x="1" y="11" width="12" height="2" rx="1"/>
+        </svg>
+        Chunk Inspector
+      </div>
+      <div class="nav-item" onclick="showPage('config-library', this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M2 4h12M2 8h8M2 12h10"/>
+          <circle cx="13" cy="11" r="2"/>
+        </svg>
+        Config Library
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">System</div>
+      <div class="nav-item" onclick="showPage('health', this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M1 8h3l2-5 3 10 2-6 2 3h2"/>
+        </svg>
+        Health
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Roadmap</div>
+      <div class="nav-item" style="opacity:0.5; pointer-events:none">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 8h10M9 4l4 4-4 4"/>
+        </svg>
+        GraphRAG <span class="nav-badge soon">R4</span>
+      </div>
+      <div class="nav-item" style="opacity:0.5; pointer-events:none">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/>
+        </svg>
+        Observability <span class="nav-badge soon">R6</span>
+      </div>
+      <div class="nav-item" style="opacity:0.5; pointer-events:none">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="4" width="12" height="10" rx="1"/>
+          <path d="M5 4V2h6v2"/>
+        </svg>
+        Auth <span class="nav-badge soon">R7</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PAGE: CONTROL PANEL
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="page active" id="page-control-panel">
+      <div class="page-header">
+        <div class="page-title">Control Panel</div>
+        <div class="page-subtitle">Configure every layer of the RAG pipeline. R2+ knobs are visible but locked until activated.</div>
+      </div>
+
+      <!-- CHUNKER SECTION -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Chunker</span>
+          <span class="section-release r1">R1 Active</span>
+        </div>
+        <div class="knobs-grid">
+          <div class="knob">
+            <div class="knob-label">Chunker Type</div>
+            <select id="chunker-type" onchange="onChunkerTypeChange()">
+              <option value="text">TextChunker — Fixed Token + Boundary</option>
+              <option value="pdf" disabled>PDFChunker — Page-Aware ✦ R2</option>
+              <option value="docx" disabled>DOCXChunker — Heading-Aware ✦ R2</option>
+              <option value="markdown" disabled>MarkdownChunker — Header Hierarchy ✦ R2</option>
+              <option value="html" disabled>HTMLChunker — Tag-Aware ✦ R2</option>
+              <option value="excel" disabled>ExcelChunker — Sheet/Row/Col ✦ R2</option>
+              <option value="table_stitch" disabled>TableStitch — Cross-Page Tables ✦ R2</option>
+            </select>
+          </div>
+
+          <div class="knob" id="knob-chunk-size">
+            <div class="knob-label">Chunk Size (tokens)</div>
+            <input type="range" id="chunk-size" min="50" max="2000" step="50" value="500"
+              oninput="document.getElementById('chunk-size-val').textContent = this.value">
+            <div class="range-value" id="chunk-size-val">500</div>
+            <div class="range-labels"><span>50</span><span>2000</span></div>
+          </div>
+
+          <div class="knob" id="knob-chunk-overlap">
+            <div class="knob-label">Chunk Overlap (tokens)</div>
+            <input type="range" id="chunk-overlap" min="0" max="500" step="10" value="50"
+              oninput="document.getElementById('chunk-overlap-val').textContent = this.value">
+            <div class="range-value" id="chunk-overlap-val">50</div>
+            <div class="range-labels"><span>0</span><span>500</span></div>
+          </div>
+
+          <div class="knob" id="knob-min-chunk">
+            <div class="knob-label">Min Chunk Size (tokens)</div>
+            <input type="range" id="min-chunk-size" min="1" max="200" step="5" value="50"
+              oninput="document.getElementById('min-chunk-val').textContent = this.value">
+            <div class="range-value" id="min-chunk-val">50</div>
+            <div class="range-labels"><span>1</span><span>200</span></div>
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">Tokenizer</div>
+            <select id="tokenizer">
+              <option value="tiktoken">tiktoken (cl100k_base — GPT-4)</option>
+              <option value="word_count">word_count (fast, no deps)</option>
+            </select>
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">Boundary Enforcement</div>
+            <div class="toggle-row">
+              <span>Backtrack to sentence boundary</span>
+              <div class="toggle on" id="toggle-boundary" onclick="toggleKnob(this)"></div>
+            </div>
+          </div>
+
+          <!-- R2 stubs -->
+          <div class="knob disabled">
+            <div class="knob-label">Respect Page Boundary <span class="coming-soon-pill">R2 — PDF</span></div>
+            <div class="toggle-row">
+              <span>Split at PDF page breaks</span>
+              <div class="toggle" onclick="toggleKnob(this)"></div>
+            </div>
+          </div>
+
+          <div class="knob disabled">
+            <div class="knob-label">Preserve Headings <span class="coming-soon-pill">R2 — DOCX</span></div>
+            <div class="toggle-row">
+              <span>Include heading in chunk text</span>
+              <div class="toggle on" onclick="toggleKnob(this)"></div>
+            </div>
+          </div>
+
+          <div class="knob disabled">
+            <div class="knob-label">Hybrid Strategy <span class="coming-soon-pill">R2 — Meta</span></div>
+            <div class="toggle-row">
+              <span>Structure-first + token backtrack</span>
+              <div class="toggle" onclick="toggleKnob(this)"></div>
+            </div>
+          </div>
+
+          <div class="knob disabled">
+            <div class="knob-label">Header Levels <span class="coming-soon-pill">R2 — MD</span></div>
+            <select disabled>
+              <option>H1, H2, H3</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- RETRIEVER SECTION -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Retriever</span>
+          <span class="section-release r1">R1 Active — Dense</span>
+        </div>
+        <div class="knobs-grid">
+          <div class="knob">
+            <div class="knob-label">Retriever Type</div>
+            <select id="retriever-type">
+              <option value="dense">DenseRetriever — Cosine Similarity</option>
+              <option value="bm25" disabled>BM25Retriever — Sparse ✦ R3</option>
+              <option value="hybrid" disabled>HybridRetriever — Dense + Sparse ✦ R3</option>
+              <option value="mmr" disabled>MMRRetriever — Diversity ✦ R3</option>
+              <option value="reranker" disabled>ReRankerRetriever — Cross-Encoder ✦ R3</option>
+              <option value="compression" disabled>CompressionRetriever — Filtered ✦ R3</option>
+            </select>
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">Top K Results</div>
+            <input type="range" id="top-k" min="1" max="20" step="1" value="5"
+              oninput="document.getElementById('top-k-val').textContent = this.value">
+            <div class="range-value" id="top-k-val">5</div>
+            <div class="range-labels"><span>1</span><span>20</span></div>
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">Score Threshold</div>
+            <input type="range" id="score-threshold" min="0" max="100" step="5" value="0"
+              oninput="document.getElementById('score-threshold-val').textContent = (this.value/100).toFixed(2)">
+            <div class="range-value" id="score-threshold-val">0.00</div>
+            <div class="range-labels"><span>0.00</span><span>1.00</span></div>
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">HNSW ef Parameter</div>
+            <input type="range" id="ef" min="16" max="512" step="16" value="128"
+              oninput="document.getElementById('ef-val').textContent = this.value">
+            <div class="range-value" id="ef-val">128</div>
+            <div class="range-labels"><span>16</span><span>512</span></div>
+          </div>
+
+          <!-- R3 stubs -->
+          <div class="knob disabled">
+            <div class="knob-label">BM25 k1 <span class="coming-soon-pill">R3 — BM25</span></div>
+            <input type="range" min="0" max="300" step="10" value="150" disabled>
+            <div class="range-value">1.50</div>
+          </div>
+
+          <div class="knob disabled">
+            <div class="knob-label">Hybrid Alpha (dense weight) <span class="coming-soon-pill">R3 — Hybrid</span></div>
+            <input type="range" min="0" max="100" step="5" value="70" disabled>
+            <div class="range-value">0.70</div>
+          </div>
+
+          <div class="knob disabled">
+            <div class="knob-label">MMR Lambda <span class="coming-soon-pill">R3 — MMR</span></div>
+            <input type="range" min="0" max="100" step="5" value="50" disabled>
+            <div class="range-value">0.50</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VECTOR STORE SECTION -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Vector Store</span>
+          <span class="section-release r1">R1 Active — Qdrant</span>
+        </div>
+        <div class="knobs-grid">
+          <div class="knob">
+            <div class="knob-label">Vector Store</div>
+            <select id="vector-store">
+              <option value="qdrant">Qdrant — R1 Active</option>
+              <option value="faiss" disabled>FAISS — In-Memory ✦ R3</option>
+              <option value="chromadb" disabled>ChromaDB ✦ R3</option>
+              <option value="pinecone" disabled>Pinecone — Managed ✦ R3</option>
+            </select>
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">Collection Name</div>
+            <input type="text" id="collection-name" value="raglab" placeholder="raglab">
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">Distance Metric</div>
+            <select id="distance-metric">
+              <option value="Cosine">Cosine</option>
+              <option value="Dot">Dot Product</option>
+              <option value="Euclid">Euclidean</option>
+            </select>
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">HNSW M (graph connectivity)</div>
+            <input type="range" id="hnsw-m" min="4" max="64" step="4" value="16"
+              oninput="document.getElementById('hnsw-m-val').textContent = this.value">
+            <div class="range-value" id="hnsw-m-val">16</div>
+            <div class="range-labels"><span>4</span><span>64</span></div>
+          </div>
+
+          <!-- R3 stubs -->
+          <div class="knob disabled">
+            <div class="knob-label">FAISS Index Type <span class="coming-soon-pill">R3</span></div>
+            <select disabled><option>IVFFlat</option></select>
+          </div>
+
+          <div class="knob disabled">
+            <div class="knob-label">Pinecone Environment <span class="coming-soon-pill">R3</span></div>
+            <input type="text" value="us-east-1-aws" disabled>
+          </div>
+        </div>
+      </div>
+
+      <!-- LLM PROVIDER SECTION -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">LLM Provider</span>
+          <span class="section-release r1">R1 Active</span>
+        </div>
+        <div class="knobs-grid">
+          <div class="knob">
+            <div class="knob-label">Provider</div>
+            <select id="llm-provider">
+              <option value="azure_openai">Azure OpenAI (Primary)</option>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic Claude</option>
+              <option value="ollama">Ollama (Local)</option>
+              <option value="vertex" disabled>Vertex AI ✦ R2</option>
+            </select>
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">Temperature</div>
+            <input type="range" id="temperature" min="0" max="200" step="5" value="0"
+              oninput="document.getElementById('temp-val').textContent = (this.value/100).toFixed(2)">
+            <div class="range-value" id="temp-val">0.00</div>
+            <div class="range-labels"><span>0.00</span><span>2.00</span></div>
+          </div>
+
+          <div class="knob">
+            <div class="knob-label">Max Tokens</div>
+            <input type="range" id="max-tokens" min="128" max="4096" step="128" value="1024"
+              oninput="document.getElementById('max-tokens-val').textContent = this.value">
+            <div class="range-value" id="max-tokens-val">1024</div>
+            <div class="range-labels"><span>128</span><span>4096</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STORAGE SECTION -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Storage Backend</span>
+          <span class="section-release r1">R1 — Local</span>
+        </div>
+        <div class="knobs-grid">
+          <div class="knob">
+            <div class="knob-label">Storage Provider</div>
+            <select id="storage-provider">
+              <option value="local">Local Filesystem (R1 Active)</option>
+              <option value="s3" disabled>AWS S3 ✦ R2</option>
+              <option value="azure_blob" disabled>Azure Blob Storage ✦ R2</option>
+              <option value="gcs" disabled>Google Cloud Storage ✦ R7</option>
+            </select>
+          </div>
+
+          <div class="knob disabled">
+            <div class="knob-label">S3 Bucket <span class="coming-soon-pill">R2</span></div>
+            <input type="text" value="raglab-documents" disabled>
+          </div>
+
+          <div class="knob disabled">
+            <div class="knob-label">Azure Container <span class="coming-soon-pill">R2</span></div>
+            <input type="text" value="raglab-docs" disabled>
+          </div>
+        </div>
+      </div>
+
+      <!-- R4+ STUBS -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">GraphRAG</span>
+          <span class="section-release stub">R4 — Coming Soon</span>
+        </div>
+        <div class="knobs-grid">
+          <div class="knob disabled">
+            <div class="knob-label">Graph Backend <span class="coming-soon-pill">R4</span></div>
+            <select disabled><option>NetworkX (in-memory)</option><option>Neo4j</option></select>
+          </div>
+          <div class="knob disabled">
+            <div class="knob-label">Community Detection <span class="coming-soon-pill">R4</span></div>
+            <select disabled><option>Leiden Algorithm</option><option>Louvain</option></select>
+          </div>
+          <div class="knob disabled">
+            <div class="knob-label">Graph Depth <span class="coming-soon-pill">R4</span></div>
+            <input type="range" min="1" max="5" value="2" disabled>
+            <div class="range-value">2</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Caching & Performance</span>
+          <span class="section-release stub">R5 — Coming Soon</span>
+        </div>
+        <div class="knobs-grid">
+          <div class="knob disabled">
+            <div class="knob-label">Semantic Cache <span class="coming-soon-pill">R5</span></div>
+            <div class="toggle-row"><span>Cache similar queries via Redis</span><div class="toggle" onclick="toggleKnob(this)"></div></div>
+          </div>
+          <div class="knob disabled">
+            <div class="knob-label">Cache TTL (seconds) <span class="coming-soon-pill">R5</span></div>
+            <input type="range" min="60" max="3600" value="300" disabled>
+            <div class="range-value">300</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Observability</span>
+          <span class="section-release stub">R6 — Coming Soon</span>
+        </div>
+        <div class="knobs-grid">
+          <div class="knob disabled">
+            <div class="knob-label">Evaluation Metrics <span class="coming-soon-pill">R6</span></div>
+            <select disabled><option>Faithfulness + Relevance + Context Recall</option></select>
+          </div>
+          <div class="knob disabled">
+            <div class="knob-label">Trace Backend <span class="coming-soon-pill">R6</span></div>
+            <select disabled><option>LangSmith</option><option>Phoenix (Arize)</option></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action bar -->
+      <div style="display:flex; gap:10px; flex-wrap:wrap; padding-top: 8px;">
+        <button class="btn btn-primary" onclick="saveConfig()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 14h12V5l-3-3H2z"/><path d="M10 2v4H4V2"/><path d="M4 9h8"/></svg>
+          Save Config
+        </button>
+        <button class="btn btn-secondary" onclick="loadConfig()">Load Config</button>
+        <button class="btn btn-ghost" onclick="resetConfig()">Reset Defaults</button>
+        <button class="btn btn-secondary" onclick="showPage('query', document.querySelector('.nav-item:nth-child(2)'))">
+          Run Query →
+        </button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PAGE: QUERY
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-query">
+      <div class="page-header">
+        <div class="page-title">Query</div>
+        <div class="page-subtitle">Run a RAG query using the current Control Panel configuration.</div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="knob-label" style="margin-bottom:8px">Question</div>
+        <textarea id="query-input" style="resize:vertical; min-height:80px"
+          placeholder="Ask a question about your indexed documents..."></textarea>
+        <div style="display:flex; gap:10px; margin-top:12px; align-items:center">
+          <button class="btn btn-primary" id="run-query-btn" onclick="runQuery()">
+            Run Query
+          </button>
+          <span id="query-spinner" style="display:none"><span class="spinner"></span></span>
+          <span id="query-latency" style="font-size:11px; color:var(--text-muted)"></span>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+        <div>
+          <div class="knob-label" style="margin-bottom:8px">Retrieved Chunks</div>
+          <div class="output-panel loading" id="chunks-output">Chunks will appear here after query...</div>
+        </div>
+        <div>
+          <div class="knob-label" style="margin-bottom:8px">Generated Answer</div>
+          <div class="output-panel loading" id="answer-output">Answer will appear here after query...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PAGE: INGEST
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-ingest">
+      <div class="page-header">
+        <div class="page-title">Ingest</div>
+        <div class="page-subtitle">Submit documents for async ingestion into the RAG pipeline.</div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="knobs-grid" style="margin-bottom:14px">
+          <div class="knob">
+            <div class="knob-label">Filename</div>
+            <input type="text" id="ingest-filename" placeholder="document.txt">
+          </div>
+          <div class="knob">
+            <div class="knob-label">Storage Path</div>
+            <input type="text" id="ingest-path" placeholder="/app/data/local/document.txt">
+          </div>
+          <div class="knob">
+            <div class="knob-label">Collection</div>
+            <input type="text" id="ingest-collection" value="raglab">
+          </div>
+          <div class="knob">
+            <div class="knob-label">Idempotency Key (optional)</div>
+            <input type="text" id="ingest-idem-key" placeholder="auto-generated if blank">
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center">
+          <button class="btn btn-primary" id="ingest-btn" onclick="submitIngest()">Submit Document</button>
+          <span id="ingest-spinner" style="display:none"><span class="spinner"></span></span>
+        </div>
+      </div>
+
+      <div>
+        <div class="knob-label" style="margin-bottom:8px">Ingestion Log</div>
+        <div class="output-panel" id="ingest-log" style="min-height:200px; color:var(--text-secondary)">Ingestion events will appear here...</div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PAGE: CHUNK INSPECTOR
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-chunk-inspector">
+      <div class="page-header">
+        <div class="page-title">Chunk Inspector</div>
+        <div class="page-subtitle">Preview how a text will be chunked with the current configuration before indexing.</div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="knob-label" style="margin-bottom:8px">Input Text</div>
+        <textarea id="inspector-input" style="resize:vertical; min-height:120px"
+          placeholder="Paste text here to preview chunking output..."></textarea>
+        <div style="display:flex; gap:10px; margin-top:12px; align-items:center">
+          <button class="btn btn-primary" id="inspect-btn" onclick="runInspect()">
+            Preview Chunks
+          </button>
+          <span id="inspect-spinner" style="display:none"><span class="spinner"></span></span>
+          <span id="inspect-summary" style="font-size:11px; color:var(--text-muted)"></span>
+        </div>
+      </div>
+
+      <div id="chunks-preview" style="display:none">
+        <div class="knob-label" style="margin-bottom:10px">Chunk Output</div>
+        <div id="chunks-list" style="display:flex; flex-direction:column; gap:10px"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PAGE: CONFIG LIBRARY
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-config-library">
+      <div class="page-header">
+        <div class="page-title">Config Library</div>
+        <div class="page-subtitle">Save, load, and manage named pipeline configurations.</div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-bottom:20px">
+        <input type="text" id="config-name-input" placeholder="Config name (e.g. production-v1)" style="flex:1; max-width:320px">
+        <button class="btn btn-primary" onclick="saveNamedConfig()">Save Current</button>
+        <button class="btn btn-ghost" onclick="loadConfigList()">Refresh</button>
+      </div>
+
+      <div id="config-list">
+        <div style="color:var(--text-muted); font-size:12px; padding:20px 0">No saved configs yet. Configure the Control Panel and save.</div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PAGE: HEALTH
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-health">
+      <div class="page-header">
+        <div class="page-title">System Health</div>
+        <div class="page-subtitle">Live status of all RAGLab microservices.</div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-bottom:20px; align-items:center">
+        <button class="btn btn-secondary" onclick="refreshHealth()">Refresh</button>
+        <span id="health-last-updated" style="font-size:11px; color:var(--text-muted)"></span>
+        <div class="divider" style="flex:1; height:1px; margin:0"></div>
+        <span id="health-aggregate" class="chip chip-muted">Loading...</span>
+      </div>
+
+      <div class="health-grid" id="health-grid">
+        <div style="color:var(--text-muted); font-size:12px">Loading service health...</div>
+      </div>
+    </div>
+
+  </main><!-- /main -->
+</div><!-- /shell -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const API_BASE = '{{ api_base }}';
+const GATEWAY  = '{{ gateway_url }}';
+
+let savedConfigs = JSON.parse(localStorage.getItem('raglab_configs') || '{}');
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showPage(pageId, navEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + pageId);
+  if (page) page.classList.add('active');
+  if (navEl) navEl.classList.add('active');
+  if (pageId === 'health') refreshHealth();
+  if (pageId === 'config-library') loadConfigList();
+}
+
+// ── Toggle ────────────────────────────────────────────────────────────────────
+function toggleKnob(el) {
+  el.classList.toggle('on');
+}
+
+// ── Chunker type change ───────────────────────────────────────────────────────
+function onChunkerTypeChange() {
+  // All chunker-specific knobs are visible regardless — only R1 controls are active
+}
+
+// ── Config helpers ────────────────────────────────────────────────────────────
+function getConfig() {
+  return {
+    chunker: {
+      type:                 document.getElementById('chunker-type').value,
+      chunk_size:           +document.getElementById('chunk-size').value,
+      chunk_overlap:        +document.getElementById('chunk-overlap').value,
+      min_chunk_size:       +document.getElementById('min-chunk-size').value,
+      tokenizer:            document.getElementById('tokenizer').value,
+      boundary_enforcement: document.getElementById('toggle-boundary').classList.contains('on'),
+    },
+    retriever: {
+      type:            document.getElementById('retriever-type').value,
+      top_k:           +document.getElementById('top-k').value,
+      score_threshold: +(document.getElementById('score-threshold').value / 100).toFixed(2),
+      ef:              +document.getElementById('ef').value,
+    },
+    vector_store: {
+      type:            document.getElementById('vector-store').value,
+      collection:      document.getElementById('collection-name').value,
+      distance:        document.getElementById('distance-metric').value,
+      hnsw_m:          +document.getElementById('hnsw-m').value,
+    },
+    llm: {
+      provider:     document.getElementById('llm-provider').value,
+      temperature:  +(document.getElementById('temperature').value / 100).toFixed(2),
+      max_tokens:   +document.getElementById('max-tokens').value,
+    },
+    storage: {
+      provider: document.getElementById('storage-provider').value,
+    },
+  };
+}
+
+function applyConfig(cfg) {
+  if (!cfg) return;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  const setRange = (id, val, dispId) => {
+    set(id, val);
+    const disp = document.getElementById(dispId);
+    if (disp) disp.textContent = val;
+  };
+  if (cfg.chunker) {
+    set('chunker-type', cfg.chunker.type);
+    setRange('chunk-size', cfg.chunker.chunk_size, 'chunk-size-val');
+    setRange('chunk-overlap', cfg.chunker.chunk_overlap, 'chunk-overlap-val');
+    setRange('min-chunk-size', cfg.chunker.min_chunk_size, 'min-chunk-val');
+    set('tokenizer', cfg.chunker.tokenizer);
+    const tog = document.getElementById('toggle-boundary');
+    if (tog) cfg.chunker.boundary_enforcement ? tog.classList.add('on') : tog.classList.remove('on');
+  }
+  if (cfg.retriever) {
+    set('retriever-type', cfg.retriever.type);
+    setRange('top-k', cfg.retriever.top_k, 'top-k-val');
+    setRange('score-threshold', cfg.retriever.score_threshold * 100, 'score-threshold-val');
+    document.getElementById('score-threshold-val').textContent = cfg.retriever.score_threshold.toFixed(2);
+    setRange('ef', cfg.retriever.ef, 'ef-val');
+  }
+  if (cfg.vector_store) {
+    set('vector-store', cfg.vector_store.type);
+    set('collection-name', cfg.vector_store.collection);
+    set('distance-metric', cfg.vector_store.distance);
+    setRange('hnsw-m', cfg.vector_store.hnsw_m, 'hnsw-m-val');
+  }
+  if (cfg.llm) {
+    set('llm-provider', cfg.llm.provider);
+    setRange('temperature', cfg.llm.temperature * 100, 'temp-val');
+    document.getElementById('temp-val').textContent = cfg.llm.temperature.toFixed(2);
+    setRange('max-tokens', cfg.llm.max_tokens, 'max-tokens-val');
+  }
+}
+
+function saveConfig() {
+  localStorage.setItem('raglab_last_config', JSON.stringify(getConfig()));
+  toast('Configuration saved locally.', 'ok');
+}
+
+function loadConfig() {
+  const raw = localStorage.getItem('raglab_last_config');
+  if (!raw) { toast('No saved config found.', 'warn'); return; }
+  applyConfig(JSON.parse(raw));
+  toast('Configuration loaded.', 'ok');
+}
+
+function resetConfig() {
+  applyConfig({
+    chunker: { type:'text', chunk_size:500, chunk_overlap:50, min_chunk_size:50, tokenizer:'tiktoken', boundary_enforcement:true },
+    retriever: { type:'dense', top_k:5, score_threshold:0, ef:128 },
+    vector_store: { type:'qdrant', collection:'raglab', distance:'Cosine', hnsw_m:16 },
+    llm: { provider:'azure_openai', temperature:0, max_tokens:1024 },
+    storage: { provider:'local' },
+  });
+  toast('Defaults restored.', 'ok');
+}
+
+// ── Named config library ──────────────────────────────────────────────────────
+function saveNamedConfig() {
+  const name = document.getElementById('config-name-input').value.trim();
+  if (!name) { toast('Enter a config name first.', 'warn'); return; }
+  savedConfigs[name] = { config: getConfig(), savedAt: new Date().toISOString() };
+  localStorage.setItem('raglab_configs', JSON.stringify(savedConfigs));
+  toast(`Saved config: ${name}`, 'ok');
+  loadConfigList();
+}
+
+function loadConfigList() {
+  savedConfigs = JSON.parse(localStorage.getItem('raglab_configs') || '{}');
+  const el = document.getElementById('config-list');
+  const keys = Object.keys(savedConfigs);
+  if (!keys.length) {
+    el.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:20px 0">No saved configs yet.</div>';
+    return;
+  }
+  el.innerHTML = keys.map(k => `
+    <div class="card" style="margin-bottom:10px; display:flex; align-items:center; gap:12px">
+      <div style="flex:1">
+        <div style="font-weight:600; margin-bottom:2px">${k}</div>
+        <div style="font-size:10px; color:var(--text-muted)">${new Date(savedConfigs[k].savedAt).toLocaleString()}</div>
+      </div>
+      <button class="btn btn-secondary" onclick="applyConfig(savedConfigs['${k}'].config); toast('Loaded: ${k}', 'ok')">Load</button>
+      <button class="btn btn-danger" onclick="deleteConfig('${k}')">Delete</button>
+    </div>`).join('');
+}
+
+function deleteConfig(name) {
+  delete savedConfigs[name];
+  localStorage.setItem('raglab_configs', JSON.stringify(savedConfigs));
+  loadConfigList();
+  toast(`Deleted: ${name}`, 'warn');
+}
+
+// ── Query ─────────────────────────────────────────────────────────────────────
+async function runQuery() {
+  const q = document.getElementById('query-input').value.trim();
+  if (!q) { toast('Enter a question first.', 'warn'); return; }
+  const cfg = getConfig();
+  const btn = document.getElementById('run-query-btn');
+  const spinner = document.getElementById('query-spinner');
+  const latency = document.getElementById('query-latency');
+  const chunksOut = document.getElementById('chunks-output');
+  const answerOut = document.getElementById('answer-output');
+
+  btn.disabled = true;
+  spinner.style.display = '';
+  chunksOut.className = 'output-panel loading';
+  chunksOut.textContent = 'Retrieving...';
+  answerOut.className = 'output-panel loading';
+  answerOut.textContent = 'Generating...';
+
+  const t0 = performance.now();
+  try {
+    // 1. Retrieve
+    const rResp = await fetch(`${API_BASE}/retrieve`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        query: q,
+        collection: cfg.vector_store.collection,
+        top_k: cfg.retriever.top_k,
+        retriever_type: cfg.retriever.type,
+        llm_provider: cfg.llm.provider,
+        retriever_config: { score_threshold: cfg.retriever.score_threshold, ef: cfg.retriever.ef },
+      }),
+    });
+
+    if (!rResp.ok) throw new Error(`Retrieval failed: ${rResp.status}`);
+    const rData = await rResp.json();
+    const chunks = rData.results || [];
+
+    chunksOut.className = 'output-panel';
+    chunksOut.textContent = chunks.length
+      ? chunks.map((c, i) => `[${i+1}] score=${c.metadata?.score?.toFixed(3) ?? '—'}\n${c.text}`).join('\n\n')
+      : '(no results)';
+
+    // 2. Generate
+    const gResp = await fetch(`${API_BASE}/generate`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        query: q,
+        chunks,
+        provider: cfg.llm.provider,
+        max_tokens: cfg.llm.max_tokens,
+        temperature: cfg.llm.temperature,
+      }),
+    });
+
+    if (!gResp.ok) throw new Error(`Generation failed: ${gResp.status}`);
+    const gData = await gResp.json();
+    answerOut.className = 'output-panel';
+    answerOut.textContent = gData.answer || '(empty response)';
+
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+    latency.textContent = `${elapsed}s · model: ${gData.model || '—'}`;
+
+  } catch (err) {
+    answerOut.className = 'output-panel';
+    answerOut.textContent = `Error: ${err.message}`;
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+}
+
+// ── Ingest ────────────────────────────────────────────────────────────────────
+async function submitIngest() {
+  const filename = document.getElementById('ingest-filename').value.trim();
+  const path     = document.getElementById('ingest-path').value.trim();
+  const coll     = document.getElementById('ingest-collection').value.trim();
+  const idem     = document.getElementById('ingest-idem-key').value.trim();
+  const log      = document.getElementById('ingest-log');
+  const btn      = document.getElementById('ingest-btn');
+  const spinner  = document.getElementById('ingest-spinner');
+  const cfg      = getConfig();
+
+  if (!filename || !path) { toast('Filename and storage path required.', 'warn'); return; }
+  btn.disabled = true;
+  spinner.style.display = '';
+
+  const entry = `[${new Date().toLocaleTimeString()}] Submitting: ${filename}...\n`;
+  log.textContent = entry + log.textContent;
+
+  try {
+    const body = {
+      filename, storage_path: path,
+      collection: coll || cfg.vector_store.collection,
+      chunker_type: cfg.chunker.type,
+      chunker_config: {
+        chunk_size: cfg.chunker.chunk_size,
+        chunk_overlap: cfg.chunker.chunk_overlap,
+        min_chunk_size: cfg.chunker.min_chunk_size,
+        tokenizer: cfg.chunker.tokenizer,
+        boundary_enforcement: cfg.chunker.boundary_enforcement,
+      },
+      llm_provider: cfg.llm.provider,
+    };
+    if (idem) body.idempotency_key = idem;
+
+    const resp = await fetch(`${API_BASE}/ingest`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    const status = data.duplicate ? 'DUPLICATE (skipped)' : data.status?.toUpperCase();
+    log.textContent = `[${new Date().toLocaleTimeString()}] ${status} — doc_id: ${data.doc_id}\n` + log.textContent;
+    toast(`Document ${data.duplicate ? 'already indexed' : 'queued'}: ${data.doc_id.slice(0,8)}…`, data.duplicate ? 'warn' : 'ok');
+  } catch (err) {
+    log.textContent = `[${new Date().toLocaleTimeString()}] ERROR: ${err.message}\n` + log.textContent;
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+}
+
+// ── Chunk inspector ───────────────────────────────────────────────────────────
+async function runInspect() {
+  const text    = document.getElementById('inspector-input').value.trim();
+  const btn     = document.getElementById('inspect-btn');
+  const spinner = document.getElementById('inspect-spinner');
+  const summary = document.getElementById('inspect-summary');
+  const preview = document.getElementById('chunks-preview');
+  const list    = document.getElementById('chunks-list');
+  const cfg     = getConfig();
+
+  if (!text) { toast('Paste some text first.', 'warn'); return; }
+  btn.disabled = true;
+  spinner.style.display = '';
+  summary.textContent = 'Chunking...';
+  preview.style.display = 'none';
+
+  try {
+    // Call pipeline/run with a temp local file approach — use direct pipeline API
+    const resp = await fetch(`${API_BASE}/pipeline/run`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        filename: 'inspector-preview.txt',
+        storage_path: '__inspector__',  // pipeline will handle this
+        collection: '__preview__',
+        chunker_type: cfg.chunker.type,
+        chunker_config: {
+          chunk_size: cfg.chunker.chunk_size,
+          chunk_overlap: cfg.chunker.chunk_overlap,
+          min_chunk_size: cfg.chunker.min_chunk_size,
+          tokenizer: cfg.chunker.tokenizer,
+          boundary_enforcement: cfg.chunker.boundary_enforcement,
+        },
+      }),
+    });
+
+    // For the inspector we do client-side chunking simulation
+    // Split text by rough token estimate for preview
+    const words = text.split(/\s+/).filter(Boolean);
+    const chunkSize = cfg.chunker.chunk_size;
+    const overlap   = cfg.chunker.chunk_overlap;
+    const chunks = [];
+    let i = 0;
+    while (i < words.length) {
+      const chunk = words.slice(i, i + chunkSize).join(' ');
+      if (chunk) chunks.push(chunk);
+      i += Math.max(1, chunkSize - overlap);
+    }
+
+    summary.textContent = `${chunks.length} chunks · ~${Math.round(words.length / chunks.length)} tokens avg`;
+    list.innerHTML = chunks.map((c, idx) => `
+      <div class="card" style="border-left: 2px solid var(--gold);">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+          <span class="chip chip-ok"># ${idx + 1}</span>
+          <span style="font-size:10px; color:var(--text-muted)">${c.split(/\s+/).length} words</span>
+        </div>
+        <div style="font-size:12px; line-height:1.7; color:var(--text-secondary)">${escHtml(c)}</div>
+      </div>`).join('');
+    preview.style.display = '';
+    toast(`${chunks.length} chunks generated.`, 'ok');
+  } catch (err) {
+    summary.textContent = 'Error';
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+async function refreshHealth() {
+  const grid = document.getElementById('health-grid');
+  const agg  = document.getElementById('health-aggregate');
+  const upd  = document.getElementById('health-last-updated');
+  const dot  = document.getElementById('global-status-dot');
+  grid.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Polling services...</div>';
+
+  try {
+    const resp = await fetch(`${API_BASE}/health/services`);
+    const data = await resp.json();
+    const services = data.services || [];
+
+    agg.className = 'chip ' + (data.gateway_status === 'ok' ? 'chip-ok' : 'chip-warn');
+    agg.textContent = data.gateway_status || 'unknown';
+    dot.style.background = data.gateway_status === 'ok' ? 'var(--accent-green)' : 'var(--accent-orange)';
+    upd.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
+    grid.innerHTML = services.map(s => {
+      const chipCls = s.status === 'ok' ? 'chip-ok' : s.status === 'degraded' ? 'chip-warn' : 'chip-error';
+      return `<div class="health-card">
+        <div class="health-name">${s.name}</div>
+        <span class="chip ${chipCls}">${s.status}</span>
+        <div class="health-url">${s.url}</div>
+        <div class="health-ms">${s.response_ms}ms</div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    grid.innerHTML = `<div style="color:var(--accent-red);font-size:12px">Failed to fetch health: ${err.message}</div>`;
+    dot.style.background = 'var(--accent-red)';
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = type === 'ok' ? 'var(--accent-green)' :
+                         type === 'warn' ? 'var(--accent-orange)' : 'var(--accent-red)';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(function init() {
+  const last = localStorage.getItem('raglab_last_config');
+  if (last) { try { applyConfig(JSON.parse(last)); } catch(e) {} }
+  // Initial health check
+  setTimeout(refreshHealth, 800);
+})();
+</script>
+</body>
+</html>

@@ -1,11 +1,9 @@
-"""Smoke tests for ui — /health and / endpoints."""
+"""Smoke tests for ui — /health and /."""
 import pytest
 from fastapi.testclient import TestClient
-
 from ui.main import app
 
 client = TestClient(app)
-
 
 def test_health_returns_ok():
     response = client.get("/health")
@@ -14,10 +12,8 @@ def test_health_returns_ok():
     assert data["status"] == "ok"
     assert data["service"] == "ui"
 
-
-def test_root_returns_service_info():
+def test_root_returns_html():
     response = client.get("/")
     assert response.status_code == 200
-    body = response.json()
-    assert "service" in body
-    assert body["service"] == "ui"
+    assert "text/html" in response.headers["content-type"]
+    assert b"RAGLab" in response.content
