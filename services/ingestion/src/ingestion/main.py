@@ -1,47 +1,93 @@
 """
-ingestion — Document intake, async queue publishing, and idempotency handling.
+ingestion-service — document intake, idempotency, and async queue publishing.
 
-Exposes:
-  GET  /health  — liveness + dependency status
-  GET  /        — service info
+Lifespan:
+  - Connects RabbitMQPublisher (declares exchange + queues)
+  - Initialises Postgres session factory (for duplicate detection + status tracking)
 
-Full implementation: see service-specific routers (added per phase).
+Endpoints:
+  GET  /health          — liveness + dependency status
+  GET  /                — service info
+  POST /ingest          — submit document for async ingestion
+  GET  /ingest/{doc_id} — check ingestion status
 """
 
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import FastAPI
+
+from raglab_common.db import close_db, create_tables, init_db, _session_factory
 from raglab_common.logging import configure_logging, get_logger
 from raglab_common.models import HealthModel
-from raglab_common.settings import BaseServiceSettings
+from ingestion.queue.publisher import RabbitMQPublisher
+from ingestion.routers.ingest import router as ingest_router
+from ingestion.settings import IngestionSettings
 
-settings = BaseServiceSettings()
+settings = IngestionSettings()
 configure_logging(level=settings.log_level, json_logs=settings.json_logs)
 log = get_logger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # RabbitMQ publisher
+    app.state.publisher = None
+    publisher = RabbitMQPublisher(
+        url=settings.rabbitmq_url,
+        confirm_delivery=settings.rabbitmq_confirm_delivery,
+    )
+    try:
+        await publisher.connect()
+        app.state.publisher = publisher
+        log.info("rabbitmq.ready")
+    except Exception as exc:
+        log.warning("rabbitmq.unavailable", reason=str(exc))
+
+    # Postgres
+    app.state.session_factory = None
+    try:
+        await init_db(settings.postgres_dsn)
+        await create_tables()
+        from raglab_common.db import _session_factory as sf
+        app.state.session_factory = sf
+        log.info("postgres.ready")
+    except Exception as exc:
+        log.warning("postgres.unavailable", reason=str(exc))
+
+    log.info("service.started", service="ingestion", port=settings.port)
+    yield
+
+    if app.state.publisher:
+        await app.state.publisher.close()
+    await close_db()
+    log.info("service.shutdown", service="ingestion")
+
+
 app = FastAPI(
     title="raglab-ingestion",
-    description="Document intake, async queue publishing, and idempotency handling",
+    description="Document intake, idempotency, and async queue publishing.",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
-
-@app.on_event("startup")  # noqa: deprecated
-async def _startup() -> None:
-    log.info("service.started", service="ingestion", port=8001)
+app.include_router(ingest_router)
 
 
 @app.get("/health", response_model=HealthModel)
 async def health() -> HealthModel:
-    """Liveness check. Extended dependency checks added per phase."""
-    return HealthModel(service="ingestion")
+    deps = {
+        "rabbitmq": "ok" if getattr(app.state, "publisher", None) and app.state.publisher.is_connected else "unavailable",
+        "postgres": "ok" if getattr(app.state, "session_factory", None) is not None else "unavailable",
+    }
+    status = "ok" if all(v == "ok" for v in deps.values()) else "degraded"
+    return HealthModel(service="ingestion", status=status, dependencies=deps)
 
 
 @app.get("/")
 async def root() -> dict:
-    return {
-        "service": "ingestion",
-        "version": "0.1.0",
-        "release": "R1",
-        "docs": "/docs",
-    }
+    return {"service": "ingestion", "version": "0.1.0", "release": "R1", "docs": "/docs"}
