@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab R3 — Release Notes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0a0a0f;--surface:#111118;--card:#1c1c25;
+      --gold:#d4a843;--gold-dim:rgba(212,168,67,.12);
+      --text:#f0ede8;--muted:#9a9490;--dim:#5a5650;
+      --green:#3ecf8e;--blue:#5e9cf5;--orange:#f0944d;
+      --red:#f26464;--purple:#a78bfa;--teal:#2dd4bf;
+      --border:rgba(212,168,67,.15);--border-hi:rgba(212,168,67,.45);
+      --mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--ui:'Space Mono',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:rgba(212,168,67,.3);border-radius:3px}
+
+    .hero{background:linear-gradient(135deg,#0a0a0f 0%,#111118 60%,#0a0f1a 100%);border-bottom:1px solid var(--border);padding:64px 48px 48px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 60% 40%,rgba(94,156,245,.06) 0%,transparent 55%),radial-gradient(ellipse at 20% 80%,rgba(212,168,67,.05) 0%,transparent 45%);pointer-events:none}
+    .hero-eyebrow{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);margin-bottom:16px}
+    .hero-title{font-family:var(--display);font-size:clamp(36px,5vw,64px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:16px}
+    .hero-title span{color:var(--blue)}
+    .hero-sub{font-size:15px;color:var(--muted);max-width:580px;margin-bottom:32px}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:20px;font-family:var(--ui);font-size:11px;color:var(--dim)}
+    .hero-meta strong{color:var(--muted)}
+
+    .stats-bar{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+    .stat{flex:1;min-width:130px;padding:20px 24px;border-right:1px solid var(--border)}
+    .stat:last-child{border-right:none}
+    .stat-value{font-family:var(--display);font-size:28px;font-weight:800;color:var(--blue);line-height:1;margin-bottom:4px}
+    .stat-label{font-size:9px;color:var(--dim);font-family:var(--ui);text-transform:uppercase;letter-spacing:.1em}
+
+    .container{max-width:1080px;margin:0 auto;padding:0 48px 80px}
+    .section{padding:48px 0;border-bottom:1px solid var(--border)}
+    .section:last-child{border-bottom:none}
+    .section-label{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+    .section-title{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+    .section-lead{font-size:13px;color:var(--muted);margin-bottom:28px;max-width:640px}
+
+    /* Retriever table */
+    table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px}
+    th{font-family:var(--ui);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface)}
+    td{padding:9px 12px;border-bottom:1px solid rgba(212,168,67,.05);vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:rgba(212,168,67,.02)}
+
+    /* Retriever cards */
+    .retriever-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;margin-top:20px}
+    .retriever-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;transition:border-color 150ms}
+    .retriever-card:hover{border-color:var(--border-hi)}
+    .rc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .rc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .rc-name{font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em}
+    .rc-type{font-size:9px;color:var(--dim);margin-left:auto;font-family:var(--ui)}
+    .rc-desc{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:10px}
+    .rc-params{display:flex;flex-wrap:wrap;gap:4px}
+    .param-tag{font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(212,168,67,.06);color:var(--dim);border:1px solid var(--border);font-family:var(--ui)}
+
+    /* RRF formula */
+    .formula-box{background:var(--surface);border:1px solid var(--border-hi);border-radius:10px;padding:20px;margin:20px 0;font-family:var(--mono)}
+    .formula-title{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+    .formula{font-size:14px;color:var(--text);line-height:1.8}
+    .formula span{color:var(--gold)}
+    .formula-note{font-size:11px;color:var(--muted);margin-top:8px}
+
+    /* Pipeline */
+    .pipeline{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin:20px 0}
+    .pipe-step{text-align:center;flex:1;min-width:80px}
+    .pipe-icon{width:42px;height:42px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+    .pipe-icon.new{border-color:var(--blue);background:rgba(94,156,245,.08)}
+    .pipe-icon.active{border-color:var(--gold);background:var(--gold-dim)}
+    .pipe-name{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .pipe-tech{font-size:9px;color:var(--dim);margin-top:2px}
+    .pipe-arrow{font-size:14px;color:var(--gold);padding:0 6px;flex-shrink:0}
+
+    /* CI/CD cards */
+    .cicd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+    .cicd-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px}
+    .cicd-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .cicd-badge{font-family:var(--ui);font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.07em;text-transform:uppercase}
+    .badge-active{background:rgba(62,207,142,.12);color:var(--green);border:1px solid rgba(62,207,142,.25)}
+    .badge-stub{background:rgba(90,86,80,.12);color:var(--dim);border:1px solid var(--border)}
+    .badge-oidc{background:rgba(94,156,245,.12);color:var(--blue);border:1px solid rgba(94,156,245,.25)}
+    .cicd-name{font-weight:600;font-size:12px}
+    .cicd-desc{font-size:11px;color:var(--muted);line-height:1.6}
+
+    /* Code */
+    .code{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:11px;color:var(--muted);line-height:1.8;overflow-x:auto;white-space:pre}
+    .code .k{color:var(--blue)} .code .s{color:var(--green)} .code .c{color:var(--dim)} .code .g{color:var(--gold)}
+
+    /* Interview cards */
+    .interview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+    .interview-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;padding:16px}
+    .interview-q{font-weight:600;font-size:12px;margin-bottom:8px;color:var(--text)}
+    .interview-a{font-size:11px;color:var(--muted);line-height:1.7}
+
+    /* Roadmap */
+    .roadmap{display:flex;flex-direction:column;gap:0}
+    .r-row{display:grid;grid-template-columns:100px 1fr;padding:14px 0;border-bottom:1px solid rgba(212,168,67,.06);align-items:start}
+    .r-tag{font-family:var(--ui);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:2px}
+    .done{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border-hi)}
+    .next{background:rgba(94,156,245,.1);color:var(--blue);border:1px solid rgba(94,156,245,.3)}
+    .later{background:rgba(90,86,80,.1);color:var(--dim);border:1px solid var(--border)}
+    .r-content{padding-left:16px}
+    .r-name{font-weight:600;margin-bottom:2px}
+    .r-desc{font-size:11px;color:var(--muted)}
+
+    .footer{background:var(--surface);border-top:1px solid var(--border);padding:28px 48px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--dim);font-family:var(--ui)}
+    .footer a{color:var(--gold);text-decoration:none}
+
+    @media(max-width:640px){.hero,.container,.footer{padding-left:20px;padding-right:20px}.stats-bar{flex-direction:column}.stat{border-right:none;border-bottom:1px solid var(--border)}}
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Release Notes · June 2026</div>
+  <h1 class="hero-title">RAGLab <span>R3</span></h1>
+  <p class="hero-sub">Retrieval Power + CI/CD. Five retrieval strategies activated, side-by-side comparison UI, and production CI/CD for Azure and AWS — all in one release.</p>
+  <div class="hero-meta">
+    <div><strong>raglab-retrievers</strong> v0.3.0</div>
+    <div><strong>Builds on</strong> R1 + R2</div>
+    <div><strong>New tests</strong> 427</div>
+    <div><strong>Total passing</strong> 796</div>
+    <div><strong>Infra for tests</strong> Zero</div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-value">5</div><div class="stat-label">Retrievers Activated</div></div>
+  <div class="stat"><div class="stat-value">427</div><div class="stat-label">New Tests</div></div>
+  <div class="stat"><div class="stat-value">796</div><div class="stat-label">Total Passing</div></div>
+  <div class="stat"><div class="stat-value">3</div><div class="stat-label">CI/CD Pipelines</div></div>
+  <div class="stat"><div class="stat-value">1</div><div class="stat-label">New UI Page</div></div>
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Static Credentials</div></div>
+</div>
+
+<div class="container">
+
+<!-- Pipeline -->
+<div class="section">
+  <div class="section-label">Architecture</div>
+  <div class="section-title">R3 Retrieval Layer</div>
+  <div class="section-lead">R1 shipped dense-only retrieval. R3 makes every retrieval strategy configurable at runtime — no code change required to switch strategies.</div>
+  <div class="pipeline">
+    <div class="pipe-step"><div class="pipe-icon active">📄</div><div class="pipe-name">Ingest</div><div class="pipe-tech">RabbitMQ</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">✂️</div><div class="pipe-name">Chunk</div><div class="pipe-tech">6 strategies (R2)</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">🧬</div><div class="pipe-name">Embed</div><div class="pipe-tech">Multi-provider</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">📦</div><div class="pipe-name">Index</div><div class="pipe-tech">Qdrant + Postgres</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon new">🔍</div><div class="pipe-name">Retrieve</div><div class="pipe-tech">Dense · BM25 · Hybrid · MMR · ReRank · Compress</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">🤖</div><div class="pipe-name">Generate</div><div class="pipe-tech">Multi-LLM</div></div>
+  </div>
+</div>
+
+<!-- Retrievers -->
+<div class="section">
+  <div class="section-label">Retrieval</div>
+  <div class="section-title">Five Retrievers Activated</div>
+  <div class="section-lead">All implement BaseRetriever, register in RetrieverFactory, and surface through the UI comparison knobs.</div>
+
+  <div class="retriever-grid">
+    <div class="retriever-card">
+      <div class="rc-header">
+        <div class="rc-dot" style="background:#3ecf8e;box-shadow:0 0 6px rgba(62,207,142,.4)"></div>
+        <div class="rc-name" style="color:#3ecf8e">BM25</div>
+        <div class="rc-type">Sparse · keyword</div>
+      </div>
+      <div class="rc-desc">rank-bm25 (BM25Okapi) in-process. BM25Corpus built from ChunkModel list — reusable across queries. No embedder needed. Beats dense on exact keywords, rare terms, acronyms, product codes.</div>
+      <div class="rc-params">
+        <span class="param-tag">k1 (TF saturation)</span>
+        <span class="param-tag">b (length norm)</span>
+        <span class="param-tag">top_n_factor</span>
+      </div>
+    </div>
+
+    <div class="retriever-card">
+      <div class="rc-header">
+        <div class="rc-dot" style="background:#5e9cf5;box-shadow:0 0 6px rgba(94,156,245,.4)"></div>
+        <div class="rc-name" style="color:#5e9cf5">Hybrid (RRF)</div>
+        <div class="rc-type">Dense + Sparse fusion</div>
+      </div>
+      <div class="rc-desc">Reciprocal Rank Fusion of Dense + BM25. Rank-based — sidesteps score-scale mismatch. Deduplicates by chunk_id. rrf_score in metadata. Alpha controls blend.</div>
+      <div class="rc-params">
+        <span class="param-tag">alpha</span>
+        <span class="param-tag">rrf_k</span>
+        <span class="param-tag">dense_top_k</span>
+        <span class="param-tag">bm25_top_k</span>
+      </div>
+    </div>
+
+    <div class="retriever-card">
+      <div class="rc-header">
+        <div class="rc-dot" style="background:#a78bfa;box-shadow:0 0 6px rgba(167,139,250,.4)"></div>
+        <div class="rc-name" style="color:#a78bfa">MMR</div>
+        <div class="rc-type">Diversity-aware</div>
+      </div>
+      <div class="rc-desc">Maximum Marginal Relevance (Carbonell &amp; Goldstein, 1998). Greedy selection: λ × relevance − (1−λ) × max_sim_to_selected. Kills near-duplicate chunks in top-k.</div>
+      <div class="rc-params">
+        <span class="param-tag">lambda_mult</span>
+        <span class="param-tag">fetch_k</span>
+      </div>
+    </div>
+
+    <div class="retriever-card">
+      <div class="rc-header">
+        <div class="rc-dot" style="background:#f0944d;box-shadow:0 0 6px rgba(240,148,77,.4)"></div>
+        <div class="rc-name" style="color:#f0944d">Re-Ranker</div>
+        <div class="rc-type">Cross-encoder · composable</div>
+      </div>
+      <div class="rc-desc">Stage 1: dense fetch_k candidates. Stage 2: CrossEncoder re-ranks jointly. Lazy model load. Composable — any retriever feeds Stage 1. score_threshold post-filter.</div>
+      <div class="rc-params">
+        <span class="param-tag">model_name</span>
+        <span class="param-tag">fetch_k</span>
+        <span class="param-tag">batch_size</span>
+        <span class="param-tag">score_threshold</span>
+      </div>
+    </div>
+
+    <div class="retriever-card">
+      <div class="rc-header">
+        <div class="rc-dot" style="background:#2dd4bf;box-shadow:0 0 6px rgba(45,212,191,.4)"></div>
+        <div class="rc-name" style="color:#2dd4bf">Compression</div>
+        <div class="rc-type">Contextual filter · composable</div>
+      </div>
+      <div class="rc-desc">Stage 1: dense fetch_k candidates. Stage 2: keyword (token overlap) or LLM-based passage extraction. Composable — any retriever feeds Stage 1.</div>
+      <div class="rc-params">
+        <span class="param-tag">strategy (keyword|llm)</span>
+        <span class="param-tag">min_keyword_overlap</span>
+        <span class="param-tag">fetch_k</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RRF -->
+<div class="section">
+  <div class="section-label">Algorithm</div>
+  <div class="section-title">Reciprocal Rank Fusion</div>
+  <div class="section-lead">The most interview-relevant algorithm in this release. RRF fuses on ranks — not scores — which sidesteps the dense-vs-sparse scale mismatch entirely.</div>
+
+  <div class="formula-box">
+    <div class="formula-title">RRF Score</div>
+    <div class="formula">
+      RRF(d) = <span>α</span> × <span>1 / (k + rank_dense(d))</span>
+             + <span>(1−α)</span> × <span>1 / (k + rank_bm25(d))</span>
+    </div>
+    <div class="formula-note" style="margin-top:12px">
+      <strong style="color:var(--muted)">k = 60</strong> (default) — flattens score distribution, reduces sensitivity to rank-1 outliers.<br>
+      <strong style="color:var(--muted)">α</strong> — dense weight. 1.0 = pure dense. 0.0 = pure BM25. 0.5 = balanced.<br>
+      <strong style="color:var(--muted)">Rank-based</strong> — 1st place always contributes 1/(k+1) regardless of raw score.
+      No normalisation needed across incompatible score spaces.
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Question</th><th>Answer</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Why RRF over score interpolation?</td><td style="color:var(--muted)">Dense scores and BM25 scores live on different scales. Normalising is fragile. Ranks are always comparable integers.</td></tr>
+      <tr><td>Why k=60?</td><td style="color:var(--muted)">Empirically optimal in TREC experiments. Higher k = flatter distribution = less sensitivity to top-rank dominance.</td></tr>
+      <tr><td>What does alpha=1.0 give you?</td><td style="color:var(--muted)">Pure dense retrieval. BM25 contributes 0. Useful for baseline comparison in the Comparison UI.</td></tr>
+      <tr><td>When does BM25 win?</td><td style="color:var(--muted)">Exact keywords, rare terms, codes, product names — where embeddings blur lexical specificity.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Comparison UI -->
+<div class="section">
+  <div class="section-label">UI</div>
+  <div class="section-title">Retrieval Comparison Page</div>
+  <div class="section-lead">Run the same query across all 6 strategies simultaneously. Compare latency, result counts, and which chunks appear across multiple strategies.</div>
+
+  <table>
+    <thead><tr><th>Feature</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>Route</td><td style="color:var(--muted)">GET /compare — new Jinja2 page, linked from Control Panel sidebar</td></tr>
+      <tr><td>Concurrent execution</td><td style="color:var(--muted)">Promise.all — all strategies fire in parallel, not sequential</td></tr>
+      <tr><td>Per-strategy knobs</td><td style="color:var(--muted)">14 knobs across 6 strategies + 3 common (collection, top_k, llm_provider)</td></tr>
+      <tr><td>Overlap detection</td><td style="color:var(--muted)">computeOverlaps() — chunk_ids in ≥2 strategy results get gold border + "overlap" badge</td></tr>
+      <tr><td>View modes</td><td style="color:var(--muted)">Side by Side / Highlight Overlaps (dims non-overlap chunks to 30%)</td></tr>
+      <tr><td>Score display</td><td style="color:var(--muted)">Adapts per strategy: score / rrf_score / reranker_score</td></tr>
+      <tr><td>Keyboard shortcut</td><td style="color:var(--muted)">Ctrl+Enter / Cmd+Enter triggers comparison run</td></tr>
+      <tr><td>Strategy colours</td><td style="color:var(--muted)">dense=#d4a843, bm25=#3ecf8e, hybrid=#5e9cf5, mmr=#a78bfa, reranker=#f0944d, compression=#2dd4bf</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- CI/CD -->
+<div class="section">
+  <div class="section-label">CI/CD</div>
+  <div class="section-title">GitHub Actions — Azure + AWS</div>
+  <div class="section-lead">Production-grade pipelines. OIDC everywhere — zero static credentials stored. Secrets in Key Vault (Azure) and Secrets Manager (AWS).</div>
+
+  <div class="cicd-grid">
+    <div class="cicd-card">
+      <div class="cicd-header">
+        <span class="cicd-badge badge-active">Active</span>
+        <span class="cicd-name">ci.yml</span>
+      </div>
+      <div class="cicd-desc">Push + PR → lint (ruff) → test (pytest, JUnit, coverage) → Docker build matrix (9 services). concurrency: cancel-in-progress=true (safe for CI).</div>
+    </div>
+    <div class="cicd-card">
+      <div class="cicd-header">
+        <span class="cicd-badge badge-oidc">OIDC</span>
+        <span class="cicd-name">cd-azure.yml</span>
+      </div>
+      <div class="cicd-desc">Push to main → detect-changes → ACR push → Bicep deploy → az containerapp update. Secrets via Key Vault secretRef. cancel-in-progress=false.</div>
+    </div>
+    <div class="cicd-card">
+      <div class="cicd-header">
+        <span class="cicd-badge badge-oidc">OIDC</span>
+        <span class="cicd-name">cd-aws.yml</span>
+      </div>
+      <div class="cicd-desc">Push to main → ECR push → jq-based task def update → ecs update-service → ecs wait stable → ALB health check. No AWS_ACCESS_KEY_ID stored.</div>
+    </div>
+    <div class="cicd-card">
+      <div class="cicd-header">
+        <span class="cicd-badge badge-stub">Stub · R7</span>
+        <span class="cicd-name">cd-gcp.yml</span>
+      </div>
+      <div class="cicd-desc">No on: triggers. if: false job. Workload Identity Federation documented. Cloud Run + GAR target architecture defined. Activates in R7.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Interview angles -->
+<div class="section">
+  <div class="section-label">Interview Angles</div>
+  <div class="section-title">What R3 Unlocks</div>
+  <div class="interview-grid">
+    <div class="interview-card">
+      <div class="interview-q">"How does hybrid retrieval combine sparse and dense?"</div>
+      <div class="interview-a">RRF on ranks, not raw scores — avoids normalising incompatible score scales. α × 1/(k + dense_rank) + (1−α) × 1/(k + bm25_rank). Most candidates hand-wave score-weighting and get the scale problem wrong.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"When does BM25 beat dense?"</div>
+      <div class="interview-a">Exact keywords, rare terms, codes, product names, acronyms — where embeddings blur lexical specificity. Hybrid exists because neither wins alone across all query types.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"What's MMR for?"</div>
+      <div class="interview-a">Kills near-duplicate chunks in the top-k. Trades a little relevance for diversity via lambda_mult. Critical when your corpus has repetitive passages (policy docs, legal boilerplate).</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Re-ranking cost/benefit?"</div>
+      <div class="interview-a">Cross-encoders are accurate but expensive. Over-fetch cheaply with a bi-encoder (dense, fast), then re-rank a small candidate set with the cross-encoder. The fetch_k → top_k funnel is the pattern.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Composable retrievers?"</div>
+      <div class="interview-a">Re-ranker and Compression wrap any base retriever — Dense, BM25, or Hybrid for Stage 1. Strategy + decorator pattern applied to retrieval. Swapping the base is a config change, not a code change.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"CI/CD without static credentials?"</div>
+      <div class="interview-a">OIDC federated identity for both Azure and AWS. GitHub Actions requests a short-lived token at runtime; no AWS_ACCESS_KEY_ID or AZURE_CLIENT_SECRET stored in repo secrets. Secrets in Key Vault / Secrets Manager, not env vars.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Roadmap -->
+<div class="section">
+  <div class="section-label">Roadmap</div>
+  <div class="section-title">7-Release Plan</div>
+  <div class="roadmap">
+    <div class="r-row"><span class="r-tag done">R1 ✓</span><div class="r-content"><div class="r-name">Full Shell + Core Pipeline</div><div class="r-desc">13 services, TextChunker, DenseRetriever, multi-LLM, async ingestion, Control Panel. 369 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R2 ✓</span><div class="r-content"><div class="r-name">Advanced Chunking + Cloud Storage</div><div class="r-desc">6 chunkers (PDF/DOCX/MD/HTML/Excel/Hybrid), S3 + Azure Blob. 564 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R3 ✓</span><div class="r-content"><div class="r-name">Retrieval Power + CI/CD</div><div class="r-desc">BM25, Hybrid (RRF), MMR, ReRanker, Compression retrievers. Comparison UI. Azure + AWS CI/CD. 796 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag next">R4</span><div class="r-content"><div class="r-name">GraphRAG</div><div class="r-desc">Knowledge graph via NetworkX + leidenalg. Community detection. Graph-aware retrieval. graph-service activation.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R5</span><div class="r-content"><div class="r-name">Caching + Performance</div><div class="r-desc">Semantic cache via Redis. Query + embedding cache. Latency dashboard. Batch query API.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R6</span><div class="r-content"><div class="r-name">Observability / LLMOps</div><div class="r-desc">Faithfulness + relevance + context recall. LangSmith / Phoenix tracing. Answer quality dashboard.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R7</span><div class="r-content"><div class="r-name">Auth + Multi-tenancy + GCS</div><div class="r-desc">JWT auth, per-tenant isolation, RBAC, GCS backend, auth-service + GCP CD activation.</div></div></div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <div>RAGLab R3 · Built by <a href="https://tamalkundu.com">Tamal Kundu</a> · June 2026</div>
+  <div><a href="https://github.com/tamalkundu007/raglab">GitHub</a> · Python 3.12 · FastAPI · uv · rank-bm25 · sentence-transformers · GitHub Actions · Bicep · Terraform</div>
+</div>
+
+</body>
+</html>
