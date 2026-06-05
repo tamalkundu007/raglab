@@ -478,8 +478,10 @@ class TestNamingDistinction:
         assert c.chunker_type == "hybrid"
 
     def test_hybrid_retriever_is_separate_class(self):
-        """HybridRetriever (R3) is a completely separate concept."""
-        from raglab_common.exceptions import NotImplementedFeatureError
-        from raglab_retrievers import RetrieverFactory
-        with pytest.raises(NotImplementedFeatureError):
-            RetrieverFactory.create("hybrid")  # R3 stub — correctly raises
+        """HybridRetriever (R3 active) is a completely separate concept from HybridChunker."""
+        from raglab_retrievers import HybridRetriever
+        from raglab_retrievers.base import BaseRetriever
+        # HybridRetriever is a retriever (not a chunker)
+        assert issubclass(HybridRetriever, BaseRetriever)
+        assert HybridRetriever.retriever_type == "hybrid"
+        assert not hasattr(HybridRetriever, "chunker_type")
