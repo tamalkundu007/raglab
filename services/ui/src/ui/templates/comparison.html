@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab — Retrieval Comparison</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #111118;
+      --elevated: #18181f;
+      --card:     #1c1c25;
+
+      --gold:          #d4a843;
+      --gold-dim:      rgba(212,168,67,.12);
+      --gold-glow:     rgba(212,168,67,.18);
+
+      --text:      #f0ede8;
+      --muted:     #9a9490;
+      --dim:       #5a5650;
+      --disabled:  #3a3830;
+
+      --border:        rgba(212,168,67,.15);
+      --border-hover:  rgba(212,168,67,.35);
+      --border-active: rgba(212,168,67,.60);
+
+      --green:  #3ecf8e;
+      --blue:   #5e9cf5;
+      --orange: #f0944d;
+      --red:    #f26464;
+      --purple: #a78bfa;
+      --teal:   #2dd4bf;
+
+      --mono:    'JetBrains Mono', monospace;
+      --display: 'Syne', sans-serif;
+      --ui:      'Space Mono', monospace;
+
+      --radius: 8px;
+      --transition: 150ms ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(212,168,67,.25); border-radius: 3px; }
+
+    /* ── Topbar ── */
+    .topbar {
+      display: flex; align-items: center; gap: 16px;
+      padding: 0 24px; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .logo {
+      font-family: var(--display); font-size: 16px; font-weight: 800;
+      color: var(--gold); text-decoration: none; letter-spacing: -.02em;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .logo-hex {
+      width: 24px; height: 24px; background: var(--gold);
+      clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: var(--bg); font-weight: 800;
+    }
+    .topbar-spacer { flex: 1; }
+    .badge {
+      font-family: var(--ui); font-size: 9px; font-weight: 700;
+      padding: 2px 7px; border-radius: 3px;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .badge-r3 { background: rgba(94,156,245,.12); color: var(--blue); border: 1px solid rgba(94,156,245,.3); }
+    .back-link {
+      font-family: var(--ui); font-size: 11px; color: var(--muted);
+      text-decoration: none; display: flex; align-items: center; gap: 6px;
+      transition: color var(--transition);
+    }
+    .back-link:hover { color: var(--gold); }
+
+    /* ── Main layout ── */
+    .main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+    /* ── Page header ── */
+    .page-header { margin-bottom: 24px; }
+    .page-title {
+      font-family: var(--display); font-size: 20px; font-weight: 700;
+      letter-spacing: -.02em; margin-bottom: 4px;
+    }
+    .page-subtitle { font-size: 11px; color: var(--muted); }
+
+    /* ── Query bar ── */
+    .query-bar {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+      margin-bottom: 20px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .query-row { display: flex; gap: 10px; align-items: flex-end; }
+    textarea {
+      flex: 1; resize: none;
+      background: var(--elevated); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text);
+      font-family: var(--mono); font-size: 13px;
+      padding: 8px 12px; outline: none;
+      transition: border-color var(--transition);
+    }
+    textarea:focus { border-color: var(--border-active); box-shadow: 0 0 0 2px var(--gold-glow); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 6px;
+      font-family: var(--ui); font-size: 11px; font-weight: 700;
+      letter-spacing: .05em; cursor: pointer;
+      transition: all var(--transition); border: 1px solid transparent;
+    }
+    .btn-primary { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+    .btn-primary:hover { background: #e8bb55; box-shadow: 0 0 14px var(--gold-glow); }
+    .btn-ghost { background: var(--elevated); color: var(--muted); border-color: var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-hover); }
+    .btn:disabled { opacity: .4; pointer-events: none; }
+
+    /* ── Strategy config strip ── */
+    .strategy-strip {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .strategy-toggle {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 12px;
+      cursor: pointer; transition: all var(--transition);
+      font-size: 12px; user-select: none;
+    }
+    .strategy-toggle.active { border-color: var(--border-active); }
+    .strategy-toggle:hover { border-color: var(--border-hover); }
+    .strategy-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .strategy-toggle input[type="checkbox"] { display: none; }
+
+    /* ── Collection + common params ── */
+    .common-params {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      padding: 10px 0; border-top: 1px solid var(--border); margin-top: 4px;
+    }
+    .param-group { display: flex; align-items: center; gap: 6px; }
+    .param-label { font-size: 10px; color: var(--dim); font-family: var(--ui); text-transform: uppercase; letter-spacing: .08em; }
+    select, input[type="number"], input[type="text"] {
+      background: var(--elevated); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text);
+      font-family: var(--mono); font-size: 12px;
+      padding: 5px 8px; outline: none;
+      transition: border-color var(--transition);
+    }
+    select:focus, input:focus { border-color: var(--border-active); }
+    select { appearance: none; padding-right: 20px; cursor: pointer;
+             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23d4a843'/%3E%3C/svg%3E");
+             background-repeat: no-repeat; background-position: right 6px center; }
+
+    /* ── Results grid ── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .strategy-column {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .strategy-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .strategy-name {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--ui); font-size: 11px; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+    }
+    .strategy-meta {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .meta-chip {
+      font-family: var(--ui); font-size: 9px;
+      padding: 1px 6px; border-radius: 3px;
+    }
+    .chip-time { background: rgba(212,168,67,.1); color: var(--gold); border: 1px solid var(--border); }
+    .chip-count { background: rgba(62,207,142,.1); color: var(--green); border: 1px solid rgba(62,207,142,.2); }
+    .chip-error { background: rgba(242,100,100,.1); color: var(--red); border: 1px solid rgba(242,100,100,.2); }
+
+    .strategy-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 200px; }
+    .strategy-body.loading { align-items: center; justify-content: center; color: var(--dim); font-size: 12px; }
+
+    /* ── Chunk card ── */
+    .chunk-card {
+      background: var(--elevated); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px;
+    }
+    .chunk-rank {
+      font-family: var(--ui); font-size: 9px; font-weight: 700;
+      color: var(--dim); letter-spacing: .06em; margin-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .chunk-score {
+      font-size: 9px; padding: 1px 5px; border-radius: 3px;
+    }
+    .chunk-text {
+      font-size: 11px; color: var(--muted); line-height: 1.7;
+      display: -webkit-box; -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .chunk-text.expanded { -webkit-line-clamp: unset; }
+    .chunk-toggle {
+      font-size: 9px; color: var(--dim); cursor: pointer; margin-top: 4px;
+      font-family: var(--ui); transition: color var(--transition);
+    }
+    .chunk-toggle:hover { color: var(--gold); }
+
+    /* ── Empty / loading states ── */
+    .state-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 8px;
+      padding: 32px; color: var(--dim); font-size: 11px; text-align: center;
+    }
+    .state-empty svg { opacity: .3; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border); border-top-color: var(--gold);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Summary bar ── */
+    .summary-bar {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      padding: 12px 0; margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .summary-stat { font-size: 11px; color: var(--muted); }
+    .summary-stat strong { color: var(--text); }
+
+    /* ── Per-strategy param panels ── */
+    .param-panel {
+      background: var(--elevated); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px;
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .param-field { display: flex; flex-direction: column; gap: 3px; }
+    .param-field label { font-size: 9px; color: var(--dim); font-family: var(--ui); text-transform: uppercase; letter-spacing: .08em; }
+    .param-field input[type="number"] { width: 70px; }
+    .param-field select { min-width: 100px; }
+
+    /* ── Strategy colours ── */
+    .col-dense   { --s-color: #d4a843; }
+    .col-bm25    { --s-color: #3ecf8e; }
+    .col-hybrid  { --s-color: #5e9cf5; }
+    .col-mmr     { --s-color: #a78bfa; }
+    .col-reranker{ --s-color: #f0944d; }
+    .col-compression { --s-color: #2dd4bf; }
+
+    .strategy-column { border-top: 2px solid var(--s-color, var(--border)); }
+    .strategy-dot { background: var(--s-color, var(--muted)); box-shadow: 0 0 6px var(--s-color, transparent); }
+    .strategy-name { color: var(--s-color, var(--text)); }
+
+    /* ── Overlap highlight ── */
+    .chunk-card.overlap {
+      border-color: rgba(212,168,67,.4);
+      background: rgba(212,168,67,.04);
+    }
+    .overlap-badge {
+      font-size: 8px; padding: 1px 4px; border-radius: 2px;
+      background: var(--gold-dim); color: var(--gold);
+      font-family: var(--ui); font-weight: 700;
+    }
+
+    /* ── Diff view toggle ── */
+    .view-controls {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .view-btn {
+      font-family: var(--ui); font-size: 10px; font-weight: 700;
+      letter-spacing: .06em; padding: 5px 10px; border-radius: 4px;
+      cursor: pointer; border: 1px solid var(--border);
+      background: transparent; color: var(--dim);
+      transition: all var(--transition);
+    }
+    .view-btn.active { background: var(--gold-dim); color: var(--gold); border-color: var(--border-active); }
+
+    @media (max-width: 768px) {
+      .main { padding: 14px; }
+      .results-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<header class="topbar">
+  <a class="logo" href="{{ control_panel_url }}">
+    <div class="logo-hex">R</div>
+    RAGLab
+  </a>
+  <span class="badge badge-r3">R3 · Comparison</span>
+  <div class="topbar-spacer"></div>
+  <a class="back-link" href="{{ control_panel_url }}">
+    ← Control Panel
+  </a>
+</header>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div class="page-title">Retrieval Comparison</div>
+    <div class="page-subtitle">Run the same query across multiple retrieval strategies side-by-side. Compare results, scores, and latency.</div>
+  </div>
+
+  <!-- Query bar -->
+  <div class="query-bar">
+    <div class="query-row">
+      <textarea id="query-input" rows="2"
+        placeholder="Enter your query — e.g. 'How does RAG reduce hallucinations?'"></textarea>
+      <button class="btn btn-primary" id="run-btn" onclick="runComparison()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14,8 4,14"/></svg>
+        Compare
+      </button>
+      <button class="btn btn-ghost" onclick="clearResults()">Clear</button>
+    </div>
+
+    <!-- Common params -->
+    <div class="common-params">
+      <div class="param-group">
+        <span class="param-label">Collection</span>
+        <input type="text" id="collection" value="raglab" style="width:110px">
+      </div>
+      <div class="param-group">
+        <span class="param-label">Top K</span>
+        <input type="number" id="top-k" value="5" min="1" max="20" style="width:55px">
+      </div>
+      <div class="param-group">
+        <span class="param-label">LLM Provider</span>
+        <select id="llm-provider">
+          <option value="azure_openai">Azure OpenAI</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="ollama">Ollama</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy toggles + per-strategy params -->
+  <div id="strategy-controls" style="margin-bottom:20px">
+
+    <!-- Dense -->
+    <details class="strategy-toggle col-dense" id="toggle-dense" open>
+      <summary onclick="event.preventDefault(); toggleStrategy('dense')" style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="chk-dense" checked>
+        <div class="strategy-dot" style="background:#d4a843"></div>
+        <span style="font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em;color:#d4a843">DENSE</span>
+        <span style="font-size:10px;color:var(--dim);margin-left:4px">Cosine similarity</span>
+      </summary>
+      <div class="param-panel" style="margin-top:8px">
+        <div class="param-field">
+          <label>Score Threshold</label>
+          <input type="number" id="dense-score-threshold" value="0.0" min="0" max="1" step="0.05" style="width:70px">
+        </div>
+        <div class="param-field">
+          <label>HNSW ef</label>
+          <input type="number" id="dense-ef" value="128" min="16" max="512" style="width:70px">
+        </div>
+      </div>
+    </details>
+
+    <div style="height:8px"></div>
+
+    <!-- BM25 -->
+    <details class="strategy-toggle col-bm25" id="toggle-bm25">
+      <summary onclick="event.preventDefault(); toggleStrategy('bm25')" style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="chk-bm25">
+        <div class="strategy-dot" style="background:#3ecf8e"></div>
+        <span style="font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em;color:#3ecf8e">BM25</span>
+        <span style="font-size:10px;color:var(--dim);margin-left:4px">Sparse keyword</span>
+      </summary>
+      <div class="param-panel" style="margin-top:8px">
+        <div class="param-field">
+          <label>k1</label>
+          <input type="number" id="bm25-k1" value="1.5" min="0" max="3" step="0.1" style="width:70px">
+        </div>
+        <div class="param-field">
+          <label>b</label>
+          <input type="number" id="bm25-b" value="0.75" min="0" max="1" step="0.05" style="width:70px">
+        </div>
+      </div>
+    </details>
+
+    <div style="height:8px"></div>
+
+    <!-- Hybrid -->
+    <details class="strategy-toggle col-hybrid" id="toggle-hybrid">
+      <summary onclick="event.preventDefault(); toggleStrategy('hybrid')" style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="chk-hybrid">
+        <div class="strategy-dot" style="background:#5e9cf5"></div>
+        <span style="font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em;color:#5e9cf5">HYBRID</span>
+        <span style="font-size:10px;color:var(--dim);margin-left:4px">RRF fusion</span>
+      </summary>
+      <div class="param-panel" style="margin-top:8px">
+        <div class="param-field">
+          <label>Alpha (dense weight)</label>
+          <input type="number" id="hybrid-alpha" value="0.5" min="0" max="1" step="0.1" style="width:70px">
+        </div>
+        <div class="param-field">
+          <label>RRF k</label>
+          <input type="number" id="hybrid-rrf-k" value="60" min="1" max="200" style="width:70px">
+        </div>
+        <div class="param-field">
+          <label>Dense top_k</label>
+          <input type="number" id="hybrid-dense-top-k" value="20" min="1" max="100" style="width:70px">
+        </div>
+      </div>
+    </details>
+
+    <div style="height:8px"></div>
+
+    <!-- MMR -->
+    <details class="strategy-toggle col-mmr" id="toggle-mmr">
+      <summary onclick="event.preventDefault(); toggleStrategy('mmr')" style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="chk-mmr">
+        <div class="strategy-dot" style="background:#a78bfa"></div>
+        <span style="font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em;color:#a78bfa">MMR</span>
+        <span style="font-size:10px;color:var(--dim);margin-left:4px">Diversity-aware</span>
+      </summary>
+      <div class="param-panel" style="margin-top:8px">
+        <div class="param-field">
+          <label>Lambda mult</label>
+          <input type="number" id="mmr-lambda" value="0.5" min="0" max="1" step="0.1" style="width:70px">
+        </div>
+        <div class="param-field">
+          <label>Fetch k</label>
+          <input type="number" id="mmr-fetch-k" value="20" min="1" max="100" style="width:70px">
+        </div>
+      </div>
+    </details>
+
+    <div style="height:8px"></div>
+
+    <!-- ReRanker -->
+    <details class="strategy-toggle col-reranker" id="toggle-reranker">
+      <summary onclick="event.preventDefault(); toggleStrategy('reranker')" style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="chk-reranker">
+        <div class="strategy-dot" style="background:#f0944d"></div>
+        <span style="font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em;color:#f0944d">RE-RANKER</span>
+        <span style="font-size:10px;color:var(--dim);margin-left:4px">Cross-encoder</span>
+      </summary>
+      <div class="param-panel" style="margin-top:8px">
+        <div class="param-field">
+          <label>Fetch k</label>
+          <input type="number" id="reranker-fetch-k" value="20" min="1" max="100" style="width:70px">
+        </div>
+        <div class="param-field">
+          <label>Model</label>
+          <select id="reranker-model" style="min-width:200px;font-size:11px">
+            <option value="cross-encoder/ms-marco-MiniLM-L-6-v2">MiniLM-L-6 (fast)</option>
+            <option value="cross-encoder/ms-marco-electra-base">ELECTRA-base (accurate)</option>
+          </select>
+        </div>
+      </div>
+    </details>
+
+    <div style="height:8px"></div>
+
+    <!-- Compression -->
+    <details class="strategy-toggle col-compression" id="toggle-compression">
+      <summary onclick="event.preventDefault(); toggleStrategy('compression')" style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="chk-compression">
+        <div class="strategy-dot" style="background:#2dd4bf"></div>
+        <span style="font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em;color:#2dd4bf">COMPRESSION</span>
+        <span style="font-size:10px;color:var(--dim);margin-left:4px">Contextual filter</span>
+      </summary>
+      <div class="param-panel" style="margin-top:8px">
+        <div class="param-field">
+          <label>Strategy</label>
+          <select id="compression-strategy">
+            <option value="keyword">Keyword</option>
+            <option value="llm">LLM</option>
+          </select>
+        </div>
+        <div class="param-field">
+          <label>Min overlap</label>
+          <input type="number" id="compression-overlap" value="1" min="0" max="20" style="width:70px">
+        </div>
+        <div class="param-field">
+          <label>Fetch k</label>
+          <input type="number" id="compression-fetch-k" value="20" min="1" max="100" style="width:70px">
+        </div>
+      </div>
+    </details>
+
+  </div>
+
+  <!-- Summary bar (visible after run) -->
+  <div class="summary-bar" id="summary-bar" style="display:none">
+    <div class="summary-stat">Query: <strong id="summary-query"></strong></div>
+    <div class="summary-stat">Strategies run: <strong id="summary-count"></strong></div>
+    <div class="summary-stat">Fastest: <strong id="summary-fastest"></strong></div>
+    <div class="summary-stat">Most results: <strong id="summary-most"></strong></div>
+  </div>
+
+  <!-- View controls -->
+  <div class="view-controls" id="view-controls" style="display:none">
+    <button class="view-btn active" id="view-side" onclick="setView('side')">Side by Side</button>
+    <button class="view-btn" id="view-overlap" onclick="setView('overlap')">Highlight Overlaps</button>
+  </div>
+
+  <!-- Results -->
+  <div class="results-grid" id="results-grid">
+    <!-- Populated by JS -->
+    <div class="state-empty" style="grid-column:1/-1">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M14 20h12M20 14v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <div>Select strategies above and run a query to compare results.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────────
+const API_BASE = '{{ api_base }}';
+
+const STRATEGIES = {
+  dense:       { label: 'Dense',       color: '#d4a843', desc: 'Cosine similarity' },
+  bm25:        { label: 'BM25',        color: '#3ecf8e', desc: 'Sparse keyword' },
+  hybrid:      { label: 'Hybrid',      color: '#5e9cf5', desc: 'RRF fusion' },
+  mmr:         { label: 'MMR',         color: '#a78bfa', desc: 'Diversity-aware' },
+  reranker:    { label: 'Re-Ranker',   color: '#f0944d', desc: 'Cross-encoder' },
+  compression: { label: 'Compression', color: '#2dd4bf', desc: 'Contextual filter' },
+};
+
+let currentView = 'side';
+let lastResults = {};
+
+// ── Strategy toggle ────────────────────────────────────────────────────────────
+function toggleStrategy(type) {
+  const chk = document.getElementById('chk-' + type);
+  chk.checked = !chk.checked;
+  const el = document.getElementById('toggle-' + type);
+  if (chk.checked) {
+    el.style.borderColor = STRATEGIES[type].color + '88';
+    el.style.background = 'rgba(' + hexToRgb(STRATEGIES[type].color) + ',.04)';
+  } else {
+    el.style.borderColor = '';
+    el.style.background = '';
+  }
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `${r},${g},${b}`;
+}
+
+// ── Build per-strategy config ──────────────────────────────────────────────────
+function getStrategyConfig(type) {
+  const topK = parseInt(document.getElementById('top-k').value) || 5;
+  const collection = document.getElementById('collection').value.trim() || 'raglab';
+  const provider = document.getElementById('llm-provider').value;
+
+  const base = { top_k: topK, collection, llm_provider: provider };
+
+  if (type === 'dense') return {
+    ...base,
+    retriever_config: {
+      score_threshold: parseFloat(document.getElementById('dense-score-threshold').value) || 0,
+      ef: parseInt(document.getElementById('dense-ef').value) || 128,
+    },
+  };
+  if (type === 'bm25') return {
+    ...base,
+    retriever_config: {
+      k1: parseFloat(document.getElementById('bm25-k1').value) || 1.5,
+      b: parseFloat(document.getElementById('bm25-b').value) || 0.75,
+    },
+  };
+  if (type === 'hybrid') return {
+    ...base,
+    retriever_config: {
+      alpha: parseFloat(document.getElementById('hybrid-alpha').value) || 0.5,
+      rrf_k: parseInt(document.getElementById('hybrid-rrf-k').value) || 60,
+      dense_top_k: parseInt(document.getElementById('hybrid-dense-top-k').value) || 20,
+    },
+  };
+  if (type === 'mmr') return {
+    ...base,
+    retriever_config: {
+      lambda_mult: parseFloat(document.getElementById('mmr-lambda').value) || 0.5,
+      fetch_k: parseInt(document.getElementById('mmr-fetch-k').value) || 20,
+    },
+  };
+  if (type === 'reranker') return {
+    ...base,
+    retriever_config: {
+      fetch_k: parseInt(document.getElementById('reranker-fetch-k').value) || 20,
+      model_name: document.getElementById('reranker-model').value,
+    },
+  };
+  if (type === 'compression') return {
+    ...base,
+    retriever_config: {
+      strategy: document.getElementById('compression-strategy').value,
+      min_keyword_overlap: parseInt(document.getElementById('compression-overlap').value) || 1,
+      fetch_k: parseInt(document.getElementById('compression-fetch-k').value) || 20,
+    },
+  };
+  return base;
+}
+
+// ── Retrieve for a single strategy ────────────────────────────────────────────
+async function fetchStrategy(type, query) {
+  const cfg = getStrategyConfig(type);
+  const t0 = performance.now();
+
+  const resp = await fetch(`${API_BASE}/retrieve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query,
+      collection: cfg.collection,
+      top_k: cfg.top_k,
+      retriever_type: type,
+      llm_provider: cfg.llm_provider,
+      retriever_config: cfg.retriever_config || {},
+    }),
+  });
+
+  const latency = performance.now() - t0;
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+    throw new Error(err.detail || `HTTP ${resp.status}`);
+  }
+
+  const data = await resp.json();
+  return { results: data.results || [], latency };
+}
+
+// ── Main run ──────────────────────────────────────────────────────────────────
+async function runComparison() {
+  const query = document.getElementById('query-input').value.trim();
+  if (!query) { showToast('Enter a query first.'); return; }
+
+  const selected = Object.keys(STRATEGIES).filter(t =>
+    document.getElementById('chk-' + t)?.checked
+  );
+  if (!selected.length) { showToast('Select at least one strategy.'); return; }
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+
+  // Show loading columns
+  const grid = document.getElementById('results-grid');
+  grid.innerHTML = selected.map(type => renderLoadingColumn(type)).join('');
+
+  // Fire all requests concurrently
+  const promises = selected.map(type =>
+    fetchStrategy(type, query)
+      .then(data => ({ type, ...data, error: null }))
+      .catch(err => ({ type, results: [], latency: 0, error: err.message }))
+  );
+
+  const allResults = await Promise.all(promises);
+
+  // Store for view toggling
+  lastResults = {};
+  allResults.forEach(r => { lastResults[r.type] = r; });
+
+  // Compute overlaps
+  const overlapIds = computeOverlaps(allResults.map(r => r.results));
+
+  // Render
+  grid.innerHTML = allResults.map(r => renderColumn(r, overlapIds)).join('');
+
+  // Update summary
+  updateSummary(query, allResults);
+
+  document.getElementById('summary-bar').style.display = 'flex';
+  document.getElementById('view-controls').style.display = 'flex';
+  btn.disabled = false;
+}
+
+// ── Overlap detection ─────────────────────────────────────────────────────────
+function computeOverlaps(resultLists) {
+  const idCounts = {};
+  resultLists.forEach(list => {
+    const seen = new Set();
+    list.forEach(chunk => {
+      if (!seen.has(chunk.chunk_id)) {
+        idCounts[chunk.chunk_id] = (idCounts[chunk.chunk_id] || 0) + 1;
+        seen.add(chunk.chunk_id);
+      }
+    });
+  });
+  return new Set(Object.keys(idCounts).filter(id => idCounts[id] > 1));
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+function renderLoadingColumn(type) {
+  const s = STRATEGIES[type];
+  return `
+    <div class="strategy-column col-${type}" style="--s-color:${s.color}">
+      <div class="strategy-header">
+        <div class="strategy-name">
+          <div class="strategy-dot"></div>
+          ${s.label}
+        </div>
+      </div>
+      <div class="strategy-body loading">
+        <div class="spinner"></div>
+        <span>Retrieving…</span>
+      </div>
+    </div>`;
+}
+
+function renderColumn(r, overlapIds) {
+  const s = STRATEGIES[r.type];
+  const latencyStr = r.latency ? `${(r.latency/1000).toFixed(2)}s` : '—';
+  const countStr = r.error ? 'Error' : `${r.results.length} results`;
+
+  const headerMeta = r.error
+    ? `<span class="meta-chip chip-error">Error</span>`
+    : `<span class="meta-chip chip-time">${latencyStr}</span>
+       <span class="meta-chip chip-count">${countStr}</span>`;
+
+  const body = r.error
+    ? `<div class="state-empty">
+         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+           <circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>
+         </svg>
+         <div>${escHtml(r.error)}</div>
+       </div>`
+    : r.results.length === 0
+    ? `<div class="state-empty">No results returned.</div>`
+    : r.results.map((chunk, i) => renderChunk(chunk, i, overlapIds)).join('');
+
+  return `
+    <div class="strategy-column col-${r.type}" style="--s-color:${s.color}">
+      <div class="strategy-header">
+        <div class="strategy-name">
+          <div class="strategy-dot"></div>
+          ${s.label}
+          <span style="font-size:9px;color:var(--dim);font-weight:400;margin-left:2px">${s.desc}</span>
+        </div>
+        <div class="strategy-meta">${headerMeta}</div>
+      </div>
+      <div class="strategy-body">${body}</div>
+    </div>`;
+}
+
+function renderChunk(chunk, rank, overlapIds) {
+  const isOverlap = overlapIds.has(chunk.chunk_id);
+  const score = chunk.metadata?.score ?? chunk.metadata?.rrf_score ?? chunk.metadata?.reranker_score;
+  const scoreStr = score !== undefined ? score.toFixed(3) : '—';
+  const scoreStyle = `background:rgba(212,168,67,.08);color:var(--gold)`;
+
+  const overlapBadge = isOverlap
+    ? `<span class="overlap-badge">overlap</span>` : '';
+
+  const preview = escHtml(chunk.text || '').slice(0, 400);
+  const full = escHtml(chunk.text || '');
+  const needsToggle = (chunk.text || '').length > 200;
+  const uid = chunk.chunk_id.slice(0, 8);
+
+  return `
+    <div class="chunk-card${isOverlap ? ' overlap' : ''}" id="chunk-${uid}-${rank}">
+      <div class="chunk-rank">
+        <span>#${rank + 1} · <span style="color:var(--dim)">${chunk.doc_id?.slice(0,12) || 'unknown'}</span> ${overlapBadge}</span>
+        <span class="chunk-score" style="${scoreStyle}">score ${scoreStr}</span>
+      </div>
+      <div class="chunk-text" id="text-${uid}-${rank}">${preview}${needsToggle ? '…' : ''}</div>
+      ${needsToggle ? `<div class="chunk-toggle" onclick="expandChunk('${uid}','${rank}','${full.replace(/'/g,"\\'")}')">Show more ▼</div>` : ''}
+    </div>`;
+}
+
+function expandChunk(uid, rank, full) {
+  const el = document.getElementById(`text-${uid}-${rank}`);
+  const tog = el.nextElementSibling;
+  if (el.classList.contains('expanded')) {
+    el.textContent = full.slice(0, 400) + '…';
+    el.classList.remove('expanded');
+    if (tog) tog.textContent = 'Show more ▼';
+  } else {
+    el.textContent = full;
+    el.classList.add('expanded');
+    if (tog) tog.textContent = 'Show less ▲';
+  }
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+function updateSummary(query, results) {
+  document.getElementById('summary-query').textContent =
+    query.length > 60 ? query.slice(0, 60) + '…' : query;
+  document.getElementById('summary-count').textContent =
+    results.filter(r => !r.error).length;
+
+  const successful = results.filter(r => !r.error && r.results.length > 0);
+  if (successful.length) {
+    const fastest = successful.reduce((a, b) => a.latency < b.latency ? a : b);
+    document.getElementById('summary-fastest').textContent =
+      `${STRATEGIES[fastest.type].label} (${(fastest.latency/1000).toFixed(2)}s)`;
+
+    const most = successful.reduce((a, b) => a.results.length > b.results.length ? a : b);
+    document.getElementById('summary-most').textContent =
+      `${STRATEGIES[most.type].label} (${most.results.length})`;
+  }
+}
+
+// ── View modes ────────────────────────────────────────────────────────────────
+function setView(view) {
+  currentView = view;
+  document.getElementById('view-side').classList.toggle('active', view === 'side');
+  document.getElementById('view-overlap').classList.toggle('active', view === 'overlap');
+
+  if (view === 'overlap') {
+    document.querySelectorAll('.chunk-card:not(.overlap)').forEach(el => {
+      el.style.opacity = '0.3';
+    });
+    document.querySelectorAll('.chunk-card.overlap').forEach(el => {
+      el.style.opacity = '1';
+    });
+  } else {
+    document.querySelectorAll('.chunk-card').forEach(el => {
+      el.style.opacity = '1';
+    });
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function clearResults() {
+  lastResults = {};
+  document.getElementById('results-grid').innerHTML = `
+    <div class="state-empty" style="grid-column:1/-1">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M14 20h12M20 14v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <div>Select strategies above and run a query to compare results.</div>
+    </div>`;
+  document.getElementById('summary-bar').style.display = 'none';
+  document.getElementById('view-controls').style.display = 'none';
+  document.getElementById('query-input').value = '';
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let _toastTimer;
+function showToast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    Object.assign(t.style, {
+      position:'fixed',bottom:'20px',right:'20px',
+      background:'var(--card)',border:'1px solid var(--border-active)',
+      borderRadius:'8px',padding:'10px 14px',fontFamily:'var(--mono)',
+      fontSize:'12px',color:'var(--text)',
+      boxShadow:'0 8px 24px rgba(0,0,0,.5)',
+      transition:'all 300ms ease',opacity:'0',transform:'translateY(16px)',
+      zIndex:'999',
+    });
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateY(0)';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateY(16px)';
+  }, 3000);
+}
+
+// ── Keyboard shortcut: Ctrl+Enter to run ──────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runComparison();
+});
+</script>
+</body>
+</html>
