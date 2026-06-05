@@ -1,0 +1,91 @@
+# RAGLab — GCP Continuous Deployment (STUB — activates in R7)
+#
+# This workflow is intentionally disabled (no triggers defined).
+# It will be fully implemented in Release 7 alongside:
+#   - GCSStorageBackend activation
+#   - Auth service implementation
+#   - Multi-tenant isolation
+#
+# Target architecture (R7):
+#   Registry:  Google Artifact Registry (GAR)
+#   Runtime:   Google Cloud Run (per-service, serverless)
+#   Infra:     Terraform with GCS backend
+#   Auth:      Workload Identity Federation (OIDC — no static keys)
+#
+# Required secrets (R7):
+#   GCP_PROJECT_ID               — GCP project ID
+#   GCP_REGION                   — e.g. us-central1
+#   GCP_WORKLOAD_IDENTITY_PROVIDER — Full WIF provider resource name
+#   GCP_SERVICE_ACCOUNT          — Service account email for impersonation
+#   GAR_LOCATION                 — e.g. us-central1
+#
+# This file is kept in the repo so:
+#   (a) The CI matrix does not fail on missing GCP steps.
+#   (b) R7 implementers have a complete starting point.
+#   (c) The pipeline structure is documented before credentials exist.
+#
+# DO NOT add `on:` triggers until R7 — this prevents accidental execution.
+
+name: CD — GCP (R7 stub)
+
+# Intentionally no triggers — this workflow is disabled until R7.
+# on: {}  ← uncomment and configure in R7
+
+jobs:
+  stub:
+    name: GCP CD stub — not active until R7
+    runs-on: ubuntu-latest
+    # This job is unreachable (no trigger) but documents the target structure.
+    if: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for GAR
+        run: |
+          gcloud auth configure-docker ${{ secrets.GAR_LOCATION }}-docker.pkg.dev
+
+      - name: Build and push to GAR
+        run: |
+          for SERVICE in api-gateway ingestion embedding indexing retrieval llm pipeline storage ui; do
+            IMAGE="${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/raglab/${SERVICE}:${{ github.sha }}"
+            docker build \
+              --file services/${SERVICE}/Dockerfile \
+              --tag "${IMAGE}" \
+              .
+            docker push "${IMAGE}"
+          done
+
+      - name: Deploy to Cloud Run
+        run: |
+          for SERVICE in api-gateway ingestion embedding indexing retrieval llm pipeline storage ui; do
+            IMAGE="${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/raglab/${SERVICE}:${{ github.sha }}"
+            gcloud run deploy raglab-${SERVICE} \
+              --image "${IMAGE}" \
+              --region ${{ secrets.GCP_REGION }} \
+              --platform managed \
+              --allow-unauthenticated \
+              --set-secrets "RAGLAB_ANTHROPIC_API_KEY=raglab-anthropic-key:latest" \
+              --min-instances 1 \
+              --max-instances 10
+          done
+
+      - name: Health check
+        run: |
+          GATEWAY_URL=$(gcloud run services describe raglab-api-gateway \
+            --region ${{ secrets.GCP_REGION }} \
+            --format "value(status.url)" 2>/dev/null || echo "")
+          if [ -n "$GATEWAY_URL" ]; then
+            curl -sf "${GATEWAY_URL}/health" | python3 -c \
+              "import sys,json; print(json.load(sys.stdin).get('status','unknown'))"
+          fi

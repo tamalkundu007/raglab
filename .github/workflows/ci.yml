@@ -1,0 +1,153 @@
+# RAGLab — Continuous Integration
+#
+# Runs on every push and pull request.
+# Steps: ruff lint → pytest across all packages and services.
+# No cloud credentials needed — all tests are infra-free.
+#
+# Matrix strategy: runs Python 3.12 (minimum supported version).
+
+name: CI
+
+"on":
+  push:
+    branches: ["main", "develop", "release/**"]
+  pull_request:
+    branches: ["main", "develop"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dev dependencies
+        run: uv sync --dev
+
+      - name: Run ruff (lint)
+        run: uv run ruff check packages/ services/ tests/
+
+      - name: Run ruff (format check)
+        run: uv run ruff format --check packages/ services/ tests/
+
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install all workspace packages
+        run: |
+          uv sync
+          # Install all internal packages and service dependencies
+          uv pip install \
+            ./packages/raglab-common \
+            ./packages/raglab-chunkers \
+            ./packages/raglab-retrievers \
+            ./services/api-gateway \
+            ./services/ingestion \
+            ./services/embedding \
+            ./services/indexing \
+            ./services/retrieval \
+            ./services/llm \
+            ./services/pipeline \
+            ./services/config \
+            ./services/storage \
+            ./services/ui \
+            ./services/graph \
+            ./services/observability \
+            ./services/auth
+
+      - name: Install test runtime dependencies
+        run: |
+          uv pip install \
+            pymupdf \
+            python-docx \
+            beautifulsoup4 \
+            openpyxl \
+            pandas \
+            rank-bm25 \
+            sentence-transformers \
+            boto3 \
+            azure-storage-blob \
+            aio-pika \
+            openai \
+            anthropic
+
+      - name: Run tests
+        run: |
+          uv run pytest packages/ services/ tests/ \
+            --tb=short \
+            -q \
+            -W ignore::DeprecationWarning \
+            --junitxml=test-results/junit.xml \
+            --cov=packages \
+            --cov=services \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: test-results/
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+
+  build-check:
+    name: Docker build check
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        service:
+          - api-gateway
+          - ingestion
+          - embedding
+          - indexing
+          - retrieval
+          - llm
+          - pipeline
+          - storage
+          - ui
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image (dry run)
+        run: |
+          docker build \
+            --file services/${{ matrix.service }}/Dockerfile \
+            --tag raglab/${{ matrix.service }}:ci-${{ github.sha }} \
+            --no-cache \
+            .

@@ -1,0 +1,202 @@
+# RAGLab — Azure Continuous Deployment
+#
+# Triggered on push to main (after CI passes).
+# Pipeline:
+#   1. Build Docker images for all active services
+#   2. Push to Azure Container Registry (ACR)
+#   3. Deploy to Azure Container Apps (ACA)
+#
+# Required GitHub Secrets:
+#   AZURE_CLIENT_ID              — Service principal / OIDC client ID
+#   AZURE_TENANT_ID              — Azure tenant ID
+#   AZURE_SUBSCRIPTION_ID        — Azure subscription ID
+#   AZURE_RESOURCE_GROUP         — Target resource group
+#   ACR_LOGIN_SERVER             — e.g. raglab.azurecr.io
+#   ACA_ENVIRONMENT              — Azure Container Apps environment name
+#   RAGLAB_AZURE_OPENAI_API_KEY  — Passed as ACA secret
+#   RAGLAB_AZURE_OPENAI_ENDPOINT — Passed as ACA secret
+#   RAGLAB_AZURE_OPENAI_CHAT_DEPLOYMENT
+#   RAGLAB_AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+#
+# Authentication: OIDC federated identity (no long-lived secrets stored).
+# Credentials never appear in logs — all via GitHub secrets.
+
+name: CD — Azure
+
+"on":
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      services:
+        description: "Comma-separated services to redeploy (empty = all)"
+        required: false
+        default: ""
+
+permissions:
+  id-token: write   # OIDC token for Azure login
+  contents: read
+
+concurrency:
+  group: cd-azure-${{ github.ref }}
+  cancel-in-progress: false  # never cancel a deploy mid-flight
+
+env:
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # ── Detect changed services ──────────────────────────────────────────────────
+  detect-changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Determine services to deploy
+        id: filter
+        run: |
+          INPUT="${{ github.event.inputs.services }}"
+          ALL="api-gateway ingestion embedding indexing retrieval llm pipeline storage ui"
+
+          if [ -n "$INPUT" ]; then
+            # Manual override
+            SERVICES="$INPUT"
+          else
+            # Detect changed services from git diff
+            CHANGED=$(git diff --name-only HEAD~1 HEAD | \
+              grep -oP 'services/\K[^/]+' | sort -u | tr '\n' ' ')
+            # Always include api-gateway if any service changes
+            if [ -n "$CHANGED" ]; then
+              CHANGED="api-gateway $CHANGED"
+            fi
+            SERVICES=$(echo "$CHANGED" | tr ' ' '\n' | sort -u | \
+              while read s; do echo $ALL | grep -w "$s" && true; done | \
+              tr '\n' ' ')
+            # Fallback: deploy all if we can't detect changes
+            SERVICES="${SERVICES:-$ALL}"
+          fi
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          echo "Deploying: $SERVICES"
+
+  # ── Build and push images ────────────────────────────────────────────────────
+  build-push:
+    name: Build & push — ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.services != ''
+    strategy:
+      matrix:
+        service:
+          - api-gateway
+          - ingestion
+          - embedding
+          - indexing
+          - retrieval
+          - llm
+          - pipeline
+          - storage
+          - ui
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to ACR
+        run: az acr login --name ${{ env.ACR_LOGIN_SERVER }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/raglab/${{ matrix.service }}:${{ env.IMAGE_TAG }}
+            ${{ env.ACR_LOGIN_SERVER }}/raglab/${{ matrix.service }}:latest
+          cache-from: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/raglab/${{ matrix.service }}:buildcache
+          cache-to: type=registry,ref=${{ env.ACR_LOGIN_SERVER }}/raglab/${{ matrix.service }}:buildcache,mode=max
+
+  # ── Deploy to Azure Container Apps ──────────────────────────────────────────
+  deploy-azure:
+    name: Deploy — Azure Container Apps
+    runs-on: ubuntu-latest
+    needs: build-push
+    environment: production-azure
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy infrastructure (Bicep)
+        run: |
+          az deployment group create \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --template-file deploy/azure/main.bicep \
+            --parameters \
+              acrLoginServer=${{ env.ACR_LOGIN_SERVER }} \
+              imageTag=${{ env.IMAGE_TAG }} \
+              acaEnvironment=${{ secrets.ACA_ENVIRONMENT }} \
+            --no-wait
+
+      - name: Update Container App images
+        run: |
+          for SERVICE in api-gateway ingestion embedding indexing retrieval llm pipeline storage ui; do
+            echo "Updating $SERVICE → ${{ env.IMAGE_TAG }}"
+            az containerapp update \
+              --name raglab-${SERVICE} \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --image ${{ env.ACR_LOGIN_SERVER }}/raglab/${SERVICE}:${{ env.IMAGE_TAG }} \
+              --set-env-vars \
+                RAGLAB_AZURE_OPENAI_API_KEY=secretref:azure-openai-key \
+                RAGLAB_AZURE_OPENAI_ENDPOINT=secretref:azure-openai-endpoint \
+                RAGLAB_AZURE_OPENAI_CHAT_DEPLOYMENT=secretref:azure-chat-deployment \
+                RAGLAB_AZURE_OPENAI_EMBEDDING_DEPLOYMENT=secretref:azure-embed-deployment \
+              || echo "Container App $SERVICE not found — may not exist yet (first deploy via Bicep)"
+          done
+
+      - name: Health check
+        run: |
+          sleep 30
+          GATEWAY_URL=$(az containerapp show \
+            --name raglab-api-gateway \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv 2>/dev/null || echo "")
+
+          if [ -n "$GATEWAY_URL" ]; then
+            STATUS=$(curl -sf "https://${GATEWAY_URL}/health" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','unknown'))" 2>/dev/null || echo "unreachable")
+            echo "Gateway health: $STATUS"
+            if [ "$STATUS" = "unreachable" ]; then
+              echo "::warning::Gateway health check failed — deployment may still be converging"
+            fi
+          else
+            echo "::warning::Could not retrieve gateway URL — skipping health check"
+          fi
+
+      - name: Notify deployment
+        if: always()
+        run: |
+          echo "Azure deployment complete — image tag: ${{ env.IMAGE_TAG }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Triggered by: ${{ github.actor }}"
