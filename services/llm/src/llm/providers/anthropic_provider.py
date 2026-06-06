@@ -39,3 +39,45 @@ class AnthropicProvider(BaseLLMProvider):
 
     def _model_name(self) -> str:
         return f"anthropic/{self._model}"
+
+    def caption_image(
+        self,
+        image_b64: str,
+        image_ext: str = "png",
+        prompt: str = "Describe this image concisely for a RAG retrieval system.",
+        max_tokens: int = 256,
+    ) -> str:
+        """
+        Caption an image using Anthropic Claude vision (claude-3-* models).
+
+        Sends the image as a base64 source block in the messages content array.
+        Requires claude-3-haiku, claude-3-sonnet, claude-3-opus, or claude-3-5-*.
+        """
+        media_type = f"image/{image_ext.lower().replace('jpg', 'jpeg')}"
+
+        try:
+            response = self._client.messages.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": media_type,
+                                    "data": image_b64,
+                                },
+                            },
+                            {"type": "text", "text": prompt},
+                        ],
+                    }
+                ],
+            )
+            content = response.content[0].text if response.content else ""
+            return content.strip() if content else "[No caption returned]"
+        except Exception as exc:
+            from raglab_common.exceptions import LLMError
+            raise LLMError(f"Anthropic vision caption failed: {exc}") from exc

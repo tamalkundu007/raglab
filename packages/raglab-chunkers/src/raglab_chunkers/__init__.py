@@ -16,6 +16,7 @@ from raglab_chunkers.html_chunker import HTMLChunker
 from raglab_chunkers.excel_chunker import ExcelChunker
 from raglab_chunkers.hybrid_chunker import HybridChunker
 from raglab_chunkers.pdf_image_chunker import PDFImageChunker
+from raglab_chunkers.caption_service import CaptionService
 from raglab_chunkers._boundary import split_into_windows, count_tokens, backtrack_to_boundary
 
 __version__ = "0.4.0"

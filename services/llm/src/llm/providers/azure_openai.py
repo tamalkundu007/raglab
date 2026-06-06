@@ -55,3 +55,42 @@ class AzureOpenAIProvider(BaseLLMProvider):
 
     def _model_name(self) -> str:
         return f"azure_openai/{self._deployment}"
+
+    def caption_image(
+        self,
+        image_b64: str,
+        image_ext: str = "png",
+        prompt: str = "Describe this image concisely for a RAG retrieval system.",
+        max_tokens: int = 256,
+    ) -> str:
+        """
+        Caption an image using Azure OpenAI GPT-4V / GPT-4o vision capabilities.
+
+        Sends the base64-encoded image as a data URL in the messages content array.
+        Requires a vision-capable deployment (gpt-4o, gpt-4-turbo-with-vision, etc.).
+        """
+        media_type = f"image/{image_ext.lower().replace('jpg', 'jpeg')}"
+        data_url = f"data:{media_type};base64,{image_b64}"
+
+        try:
+            response = self._client.chat.completions.create(
+                model=self._deployment,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": data_url, "detail": "auto"},
+                            },
+                            {"type": "text", "text": prompt},
+                        ],
+                    }
+                ],
+                max_tokens=max_tokens,
+            )
+            content = response.choices[0].message.content
+            return content.strip() if content else "[No caption returned]"
+        except Exception as exc:
+            from raglab_common.exceptions import LLMError
+            raise LLMError(f"Azure OpenAI vision caption failed: {exc}") from exc

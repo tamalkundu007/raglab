@@ -88,3 +88,75 @@ async def list_providers(request: Request) -> list[ProviderInfo]:
         )
         for p in all_providers
     ]
+
+
+# ── Caption endpoint (R4 — multimodal image captioning) ───────────────────────
+
+class CaptionRequest(BaseModel):
+    image_b64: str = Field(..., description="Base64-encoded image bytes.")
+    image_ext: str = Field(default="png", description="Image file extension (png, jpg, etc.).")
+    caption_prompt: str = Field(
+        default="Describe this image concisely for a RAG retrieval system. "
+                "Focus on text, diagrams, tables, charts, or key visual elements. "
+                "Be specific and factual.",
+        description="Prompt sent to the multimodal LLM.",
+    )
+    provider: str = Field(default=LLMProvider.AZURE_OPENAI.value)
+    max_tokens: int = Field(default=256, ge=1, le=1024)
+    doc_id: str = Field(default="")
+    page_number: int | None = Field(default=None)
+    image_index: int = Field(default=0)
+
+
+class CaptionResponse(BaseModel):
+    caption: str
+    provider: str
+    model: str
+    doc_id: str
+    page_number: int | None = None
+    image_index: int = 0
+    captioned: bool = True
+
+
+@router.post("/caption", response_model=CaptionResponse)
+async def caption_image(body: CaptionRequest, request: Request) -> CaptionResponse:
+    """
+    Caption an image using a multimodal LLM.
+
+    Accepts a base64-encoded image and returns a text caption.
+    Used by PDFImageChunker when image_handling='caption' or 'both'.
+
+    Supported providers: azure_openai (GPT-4V), anthropic (claude-3-*).
+    Other providers return a graceful fallback description.
+    """
+    providers: dict = getattr(request.app.state, "providers", {})
+
+    provider = providers.get(body.provider)
+    if provider is None:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Provider '{body.provider}' not available.",
+        )
+
+    try:
+        caption = provider.caption_image(
+            image_b64=body.image_b64,
+            image_ext=body.image_ext,
+            prompt=body.caption_prompt,
+            max_tokens=body.max_tokens,
+        )
+        return CaptionResponse(
+            caption=caption,
+            provider=body.provider,
+            model=provider._model_name(),
+            doc_id=body.doc_id,
+            page_number=body.page_number,
+            image_index=body.image_index,
+            captioned=True,
+        )
+    except NotImplementedFeatureError as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
+    except LLMError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Caption error: {exc}")

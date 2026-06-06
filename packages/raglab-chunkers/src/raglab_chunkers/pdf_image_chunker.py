@@ -140,6 +140,9 @@ class PDFImageChunker(BaseChunker):
                 f"tokenizer must be 'tiktoken' or 'word_count', got {self.tokenizer!r}"
             )
 
+        # Caption service config — used when image_handling='caption' or 'both'
+        self.caption_service_config: dict[str, Any] = cfg.get("caption_service_config", {})
+
     # ── Public entry points ────────────────────────────────────────────────────
 
     def chunk_pdf_bytes(
@@ -186,10 +189,17 @@ class PDFImageChunker(BaseChunker):
                     chunk_index += len(text_chunks)
 
             # ── Image extraction path ─────────────────────────────────────────
-            if self.image_handling in ("extract", "both"):
-                image_chunks = self._extract_images(page, doc, doc_id, metadata, page_label, chunk_index)
-                chunks.extend(image_chunks)
-                chunk_index += len(image_chunks)
+            if self.image_handling in ("extract", "both", "caption"):
+                raw_image_chunks = self._extract_images(page, doc, doc_id, metadata, page_label, chunk_index)
+
+                # Caption path: send image chunks to llm-service
+                if self.image_handling == "caption" and raw_image_chunks:
+                    from raglab_chunkers.caption_service import CaptionService
+                    svc = CaptionService(config=self.caption_service_config)
+                    raw_image_chunks = svc.caption_chunks(raw_image_chunks)
+
+                chunks.extend(raw_image_chunks)
+                chunk_index += len(raw_image_chunks)
 
         doc.close()
         return chunks
@@ -413,5 +423,13 @@ class PDFImageChunker(BaseChunker):
                 "type": "int", "default": cls._DEFAULT_MIN_CHUNK_SIZE,
                 "min": 1, "max": 200,
                 "description": "Minimum tokens per OCR text chunk.",
+            },
+            "caption_service_config": {
+                "type": "dict", "default": {},
+                "description": (
+                    "Config for CaptionService when image_handling='caption'. "
+                    "Keys: llm_service_url, caption_provider, caption_prompt, "
+                    "caption_max_tokens, timeout_seconds, on_failure."
+                ),
             },
         }

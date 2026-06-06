@@ -129,3 +129,30 @@ class BaseLLMProvider(abc.ABC):
             f"Question: {query}\n\n"
             f"Answer:"
         )
+
+    def caption_image(
+        self,
+        image_b64: str,
+        image_ext: str = "png",
+        prompt: str = "Describe this image concisely for a RAG retrieval system.",
+        max_tokens: int = 256,
+    ) -> str:
+        """
+        Caption an image using multimodal LLM capabilities.
+
+        Default implementation returns a graceful fallback for providers that
+        don't support vision. Providers with vision support (Azure OpenAI GPT-4V,
+        Anthropic claude-3-*) override this method.
+
+        Args:
+            image_b64: Base64-encoded image bytes.
+            image_ext: Image file extension (png, jpg, etc.).
+            prompt:    Instruction for the vision model.
+            max_tokens: Maximum tokens for the caption.
+
+        Returns:
+            Caption string. Falls back to a placeholder if vision not supported.
+        """
+        # Default: providers without vision support return a descriptive placeholder
+        return f"[Image — captioning not supported by provider '{self.provider}'. " \
+               f"Use azure_openai or anthropic for multimodal captioning.]"
