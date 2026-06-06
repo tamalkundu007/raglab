@@ -22,6 +22,7 @@ from fastapi import FastAPI
 from raglab_common.logging import configure_logging, get_logger
 from raglab_common.models import HealthModel
 from graph.routers.extract import router as extract_router
+from graph.routers.build import router as build_router
 from graph.settings import GraphSettings
 
 settings = GraphSettings()
@@ -66,6 +67,7 @@ app = FastAPI(
 )
 
 app.include_router(extract_router)
+app.include_router(build_router)
 
 
 @app.get("/health", response_model=HealthModel)
