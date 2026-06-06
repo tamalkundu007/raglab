@@ -43,7 +43,7 @@ raglab/
 | **R1** | Full Shell + Core Pipeline | ✅ Done |
 | **R2** | **Advanced Chunking + Cloud Storage** | ✅ Done |
 | **R3** | **Retrieval Power + CI/CD** | ✅ Done |
-| R4 | GraphRAG | 🔜 Planned |
+| **R4** | GraphRAG | 🔜 Planned |
 | R5 | Caching + Performance | 🔜 Planned |
 | R6 | Observability / LLMOps | 🔜 Planned |
 | R7 | Auth + Multi-tenancy | 🔜 Planned |

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab R4 — Release Notes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0a0a0f;--surface:#111118;--card:#1c1c25;
+      --gold:#d4a843;--gold-dim:rgba(212,168,67,.12);
+      --text:#f0ede8;--muted:#9a9490;--dim:#5a5650;
+      --green:#3ecf8e;--blue:#5e9cf5;--orange:#f0944d;
+      --red:#f26464;--purple:#a78bfa;--teal:#2dd4bf;
+      --border:rgba(212,168,67,.15);--border-hi:rgba(212,168,67,.45);
+      --mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--ui:'Space Mono',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(212,168,67,.3);border-radius:3px}
+
+    .hero{background:linear-gradient(135deg,#0a0a0f 0%,#0f0f18 60%,#0a0f1a 100%);border-bottom:1px solid var(--border);padding:64px 48px 48px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(167,139,250,.07) 0%,transparent 55%),radial-gradient(ellipse at 20% 80%,rgba(212,168,67,.05) 0%,transparent 45%);pointer-events:none}
+    .hero-eyebrow{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--purple);margin-bottom:16px}
+    .hero-title{font-family:var(--display);font-size:clamp(36px,5vw,64px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:16px}
+    .hero-title span{color:var(--purple)}
+    .hero-sub{font-size:15px;color:var(--muted);max-width:600px;margin-bottom:32px}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:20px;font-family:var(--ui);font-size:11px;color:var(--dim)}
+    .hero-meta strong{color:var(--muted)}
+
+    .stats-bar{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+    .stat{flex:1;min-width:130px;padding:20px 24px;border-right:1px solid var(--border)}
+    .stat:last-child{border-right:none}
+    .stat-value{font-family:var(--display);font-size:28px;font-weight:800;color:var(--purple);line-height:1;margin-bottom:4px}
+    .stat-label{font-size:9px;color:var(--dim);font-family:var(--ui);text-transform:uppercase;letter-spacing:.1em}
+
+    .container{max-width:1080px;margin:0 auto;padding:0 48px 80px}
+    .section{padding:48px 0;border-bottom:1px solid var(--border)}
+    .section:last-child{border-bottom:none}
+    .section-label{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--purple);margin-bottom:10px}
+    .section-title{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+    .section-lead{font-size:13px;color:var(--muted);margin-bottom:28px;max-width:640px}
+
+    table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px}
+    th{font-family:var(--ui);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface)}
+    td{padding:9px 12px;border-bottom:1px solid rgba(212,168,67,.05);vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:rgba(212,168,67,.02)}
+
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:20px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;transition:border-color .15s}
+    .card:hover{border-color:var(--border-hi)}
+    .card-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .card-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .card-name{font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em}
+    .card-desc{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px}
+    .tag-row{display:flex;flex-wrap:wrap;gap:4px}
+    .tag{font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(212,168,67,.06);color:var(--dim);border:1px solid var(--border);font-family:var(--ui)}
+
+    .pipeline{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin:20px 0}
+    .pipe-step{text-align:center;flex:1;min-width:80px}
+    .pipe-icon{width:42px;height:42px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+    .pipe-icon.new{border-color:var(--purple);background:rgba(167,139,250,.08)}
+    .pipe-icon.active{border-color:var(--gold);background:var(--gold-dim)}
+    .pipe-name{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .pipe-tech{font-size:9px;color:var(--dim);margin-top:2px}
+    .pipe-arrow{font-size:14px;color:var(--gold);padding:0 6px;flex-shrink:0}
+
+    .interview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+    .interview-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--purple);border-radius:10px;padding:16px}
+    .interview-q{font-weight:600;font-size:12px;margin-bottom:8px}
+    .interview-a{font-size:11px;color:var(--muted);line-height:1.7}
+
+    .roadmap{display:flex;flex-direction:column;gap:0}
+    .r-row{display:grid;grid-template-columns:100px 1fr;padding:14px 0;border-bottom:1px solid rgba(212,168,67,.06);align-items:start}
+    .r-tag{font-family:var(--ui);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:2px}
+    .done{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border-hi)}
+    .next{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+    .later{background:rgba(90,86,80,.1);color:var(--dim);border:1px solid var(--border)}
+    .r-content{padding-left:16px}
+    .r-name{font-weight:600;margin-bottom:2px}
+    .r-desc{font-size:11px;color:var(--muted)}
+
+    .graph-diagram{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px;margin:20px 0;position:relative;overflow:hidden}
+    .graph-diagram svg{width:100%;height:180px}
+
+    .footer{background:var(--surface);border-top:1px solid var(--border);padding:28px 48px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--dim);font-family:var(--ui)}
+    .footer a{color:var(--gold);text-decoration:none}
+
+    @media(max-width:640px){.hero,.container,.footer{padding-left:20px;padding-right:20px}.stats-bar{flex-direction:column}.stat{border-right:none;border-bottom:1px solid var(--border)}}
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Release Notes · June 2026</div>
+  <h1 class="hero-title">RAGLab <span>R4</span></h1>
+  <p class="hero-sub">Graph RAG + Advanced Document Types. Knowledge graph from scratch, scanned PDF handling, cross-page table reconstruction, production Terraform — all zero-stub at completion.</p>
+  <div class="hero-meta">
+    <div><strong>raglab-chunkers</strong> v0.4.0</div>
+    <div><strong>raglab-retrievers</strong> v0.4.0</div>
+    <div><strong>graph-service</strong> v0.2.0</div>
+    <div><strong>New tests</strong> 308</div>
+    <div><strong>Total passing</strong> 1,287</div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Stubs Remaining</div></div>
+  <div class="stat"><div class="stat-value">308</div><div class="stat-label">New Tests</div></div>
+  <div class="stat"><div class="stat-value">1,287</div><div class="stat-label">Total Passing</div></div>
+  <div class="stat"><div class="stat-value">3</div><div class="stat-label">Graph RAG Modes</div></div>
+  <div class="stat"><div class="stat-value">2</div><div class="stat-label">Terraform Clouds</div></div>
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Static Credentials</div></div>
+</div>
+
+<div class="container">
+
+<!-- Pipeline -->
+<div class="section">
+  <div class="section-label">Architecture</div>
+  <div class="section-title">R4 Full Pipeline</div>
+  <div class="section-lead">R4 activates the final stub layers: advanced document types, the graph-service, and graph-augmented retrieval.</div>
+  <div class="pipeline">
+    <div class="pipe-step"><div class="pipe-icon new">📷</div><div class="pipe-name">OCR / Scan</div><div class="pipe-tech">PDFImageChunker</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon new">📊</div><div class="pipe-name">Table Stitch</div><div class="pipe-tech">TableStitchChunker</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">✂️</div><div class="pipe-name">Chunk</div><div class="pipe-tech">8 strategies (R2+R4)</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">🧬</div><div class="pipe-name">Embed + Index</div><div class="pipe-tech">Qdrant</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon new">🕸️</div><div class="pipe-name">Graph Build</div><div class="pipe-tech">NetworkX + Leiden</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon new">🔍</div><div class="pipe-name">Graph Retrieve</div><div class="pipe-tech">Classical / Graph / Hybrid</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="pipe-icon active">🤖</div><div class="pipe-name">Generate</div><div class="pipe-tech">Multi-LLM</div></div>
+  </div>
+</div>
+
+<!-- New components -->
+<div class="section">
+  <div class="section-label">New Components</div>
+  <div class="section-title">What R4 Activates</div>
+  <div class="card-grid">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:#5e9cf5;box-shadow:0 0 6px rgba(94,156,245,.4)"></div>
+        <div class="card-name" style="color:#5e9cf5">PDFImageChunker</div>
+      </div>
+      <div class="card-desc">OCR + image extraction for scanned PDFs. PyMuPDF rasterisation → pytesseract → split_into_windows. Image regions extracted as base64, captioned via llm-service vision API.</div>
+      <div class="tag-row">
+        <span class="tag">ocr_engine (tesseract/none)</span>
+        <span class="tag">image_handling</span>
+        <span class="tag">dpi (72–600)</span>
+        <span class="tag">min_image_area</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:#3ecf8e;box-shadow:0 0 6px rgba(62,207,142,.4)"></div>
+        <div class="card-name" style="color:#3ecf8e">TableStitchChunker</div>
+      </div>
+      <div class="card-desc">Cross-page table reconstruction. Detects continuation via header repeat + column alignment. Emits GFM markdown, JSON row dicts, or CSV. Tables carry headers even when split across pages.</div>
+      <div class="tag-row">
+        <span class="tag">emit_format (markdown/json/csv)</span>
+        <span class="tag">stitch_threshold</span>
+        <span class="tag">header_repeat_detection</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:#a78bfa;box-shadow:0 0 6px rgba(167,139,250,.4)"></div>
+        <div class="card-name" style="color:#a78bfa">graph-service v0.2.0</div>
+      </div>
+      <div class="card-desc">Entity + relationship extraction via LLM → Postgres ORM → NetworkX DiGraph → Leiden community detection. POST /graph/extract, POST /graph/build, GET /graph/communities.</div>
+      <div class="tag-row">
+        <span class="tag">Postgres + NetworkX</span>
+        <span class="tag">Leiden algorithm</span>
+        <span class="tag">TTL cache</span>
+        <span class="tag">community_id on nodes</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:#f0944d;box-shadow:0 0 6px rgba(240,148,77,.4)"></div>
+        <div class="card-name" style="color:#f0944d">GraphRetriever</div>
+      </div>
+      <div class="card-desc">Classical / graph / hybrid modes. _find_entry_nodes(): word-boundary match. _traverse_graph(): BFS, cycle-safe. graph_weight blends dense and traversal results.</div>
+      <div class="tag-row">
+        <span class="tag">mode (classical/graph/hybrid)</span>
+        <span class="tag">traversal_depth (0–5)</span>
+        <span class="tag">graph_weight</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:#2dd4bf;box-shadow:0 0 6px rgba(45,212,191,.4)"></div>
+        <div class="card-name" style="color:#2dd4bf">Graph Explorer UI</div>
+      </div>
+      <div class="card-desc">D3.js v7 force-directed graph. Node inspector, community legend, BFS traversal highlight. Colour by community or entity type. Connects to graph-service API directly.</div>
+      <div class="tag-row">
+        <span class="tag">D3.js force simulation</span>
+        <span class="tag">Leiden resolution knob</span>
+        <span class="tag">BFS traversal query</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:#d4a843;box-shadow:0 0 6px rgba(212,168,67,.4)"></div>
+        <div class="card-name" style="color:#d4a843">Terraform (Azure + AWS)</div>
+      </div>
+      <div class="card-desc">AKS (OIDC + Workload Identity) + ACR + PostgreSQL + Key Vault. EKS (IRSA) + ECR + RDS Multi-AZ + Secrets Manager. No static credentials anywhere. GCP stub ready for R7.</div>
+      <div class="tag-row">
+        <span class="tag">use_oidc = true</span>
+        <span class="tag">random_password</span>
+        <span class="tag">purge_protection</span>
+        <span class="tag">scan_on_push</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Graph RAG mechanics -->
+<div class="section">
+  <div class="section-label">Algorithm</div>
+  <div class="section-title">Graph RAG Mechanics</div>
+  <div class="section-lead">Three modes. Additive — classical retrieval is never silently replaced.</div>
+  <table>
+    <thead><tr><th>Mode</th><th>Stage 1</th><th>Stage 2</th><th>Use when</th></tr></thead>
+    <tbody>
+      <tr><td style="color:var(--blue)"><strong>classical</strong></td><td style="color:var(--muted)">DenseRetriever (unchanged)</td><td style="color:var(--muted)">—</td><td style="color:var(--muted)">Baseline, A/B comparison, no graph available</td></tr>
+      <tr><td style="color:var(--purple)"><strong>graph</strong></td><td style="color:var(--muted)">_find_entry_nodes() → BFS traversal</td><td style="color:var(--muted)">chunk_ids from edges</td><td style="color:var(--muted)">Named entity queries, known graph coverage</td></tr>
+      <tr><td style="color:var(--orange)"><strong>hybrid</strong></td><td style="color:var(--muted)">DenseRetriever (classical_k chunks)</td><td style="color:var(--muted)">Entity match + BFS expansion (graph_k chunks) → merge + dedup</td><td style="color:var(--muted)">Default — best of both paths</td></tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top:16px">
+    <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+    <tbody>
+      <tr><td>Why Postgres + NetworkX, not Neo4j?</td><td style="color:var(--muted)">No new infra. Postgres already running for metadata. NetworkX rebuilds the graph in-memory with TTL cache. Revisit if traversal depth &gt; 3 proves slow in production.</td></tr>
+      <tr><td>Why Leiden, not Louvain?</td><td style="color:var(--muted)">Leiden guarantees well-connected communities (Louvain can produce disconnected ones). RBConfigurationVertexPartition with tunable resolution parameter.</td></tr>
+      <tr><td>What's the "blast radius" framing?</td><td style="color:var(--muted)">Vector search finds chunks similar to the query. Graph traversal finds chunks connected to the answer even when they don't resemble the query text — surfacing links nobody wrote down together.</td></tr>
+      <tr><td>Entity dedup strategy?</td><td style="color:var(--muted)">name_normalised = name.lower().strip(). Dedup by (name_normalised, entity_type, collection). "Apple" and "apple" are the same entity. chunk_ids appended pipe-separated on re-extraction.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Table stitching insight -->
+<div class="section">
+  <div class="section-label">The Insight</div>
+  <div class="section-title">Why Table Stitching Matters</div>
+  <div class="section-lead">This is an embedding problem masquerading as a parsing problem.</div>
+  <table>
+    <thead><tr><th>Without stitching</th><th>With stitching</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="color:var(--muted);font-family:var(--mono);font-size:11px">Page 2 chunk (orphaned):<br>"Carol | 91 | Marketing<br>Dave | 85 | Marketing"<br><br>→ No headers. LLM doesn't know what 91 means.<br>→ Query "who scored highest in Marketing?" fails.</td>
+        <td style="color:var(--muted);font-family:var(--mono);font-size:11px">Stitched chunk (pages 1–2):<br>"| Name | Score | Department |<br>| Carol | 91 | Marketing |<br>| Dave | 85 | Marketing |"<br><br>→ Headers travel with data.<br>→ Query answers correctly.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Interview angles -->
+<div class="section">
+  <div class="section-label">Interview Angles</div>
+  <div class="section-title">What R4 Unlocks</div>
+  <div class="interview-grid">
+    <div class="interview-card">
+      <div class="interview-q">"What does Graph RAG solve that vector RAG can't?"</div>
+      <div class="interview-a">Multi-hop questions and connections spread across documents. Vector retrieval finds chunks similar to the query. Graph traversal finds chunks connected to the answer — surfacing links nobody wrote down together. The blast radius framing.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"How do you build a knowledge graph from documents?"</div>
+      <div class="interview-a">LLM entity/relationship extraction → GraphEntity + GraphRelationship in Postgres → NetworkX DiGraph → Leiden community detection. Dedup by name_normalised. Defensive parser — malformed LLM JSON never crashes the pipeline.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"OCR + multimodal for image PDFs?"</div>
+      <div class="interview-a">Rasterise via PyMuPDF → pytesseract OCR → split_into_windows. Images extracted as base64, sent to llm-service vision endpoint for captioning. CaptionService is decoupled. OCR failure on a page is a warning, not a crash.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Table stitching?"</div>
+      <div class="interview-a">Tables spanning page breaks produce orphaned rows with no column context. Detect continuations via header repeat + column count alignment. Reconstruct the logical table before chunking. Headers always travel with data rows.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Graph RAG as additive?"</div>
+      <div class="interview-a">GraphRetriever has three modes: classical (pure dense), graph (traversal only), hybrid (dense + expansion). Caller chooses per query. No query is silently rerouted. Same discipline as the R3 retrieval layer.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Terraform without static credentials?"</div>
+      <div class="interview-a">Azure: use_oidc=true + federated credential in Azure AD. AWS: OIDC identity provider from EKS cluster issuer + IAM role assumption. No client_secret, no AWS_ACCESS_KEY_ID in any file. Secrets in Key Vault / Secrets Manager — set by operators post-apply.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Roadmap -->
+<div class="section">
+  <div class="section-label">Roadmap</div>
+  <div class="section-title">7-Release Plan</div>
+  <div class="roadmap">
+    <div class="r-row"><span class="r-tag done">R1 ✓</span><div class="r-content"><div class="r-name">Full Shell + Core Pipeline</div><div class="r-desc">13 services, TextChunker, DenseRetriever, multi-LLM, async ingestion, Control Panel. 369 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R2 ✓</span><div class="r-content"><div class="r-name">Advanced Chunking + Cloud Storage</div><div class="r-desc">6 chunkers (PDF/DOCX/MD/HTML/Excel/Hybrid), S3 + Azure Blob. 564 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R3 ✓</span><div class="r-content"><div class="r-name">Retrieval Power + CI/CD</div><div class="r-desc">BM25, Hybrid (RRF), MMR, ReRanker, Compression. Comparison UI. GitHub Actions CI/CD. 796 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R4 ✓</span><div class="r-content"><div class="r-name">Graph RAG + Advanced Document Types</div><div class="r-desc">PDFImageChunker (OCR + captioning), TableStitchChunker, graph-service (NetworkX + Leiden), GraphRetriever, D3.js Graph Explorer, Terraform (Azure + AWS). 1,287 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag next">R5</span><div class="r-content"><div class="r-name">Caching + Performance</div><div class="r-desc">Semantic cache via Redis. Query + embedding cache. Latency dashboard. Batch query API.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R6</span><div class="r-content"><div class="r-name">Observability / LLMOps</div><div class="r-desc">Faithfulness + relevance + context recall. LangSmith / Phoenix tracing. Answer quality dashboard.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R7</span><div class="r-content"><div class="r-name">Auth + Multi-tenancy + GCS + GCP</div><div class="r-desc">JWT auth, per-tenant isolation, RBAC, GCS backend, auth-service, GCP CD activation, Terraform GCP.</div></div></div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <div>RAGLab R4 · Built by <a href="https://tamalkundu.com">Tamal Kundu</a> · June 2026</div>
+  <div><a href="https://github.com/tamalkundu007/raglab">GitHub</a> · Python 3.12 · FastAPI · uv · NetworkX · leidenalg · pdfplumber · pytesseract · D3.js · Terraform · GitHub Actions</div>
+</div>
+
+</body>
+</html>
