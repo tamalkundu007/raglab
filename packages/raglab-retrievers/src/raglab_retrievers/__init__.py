@@ -14,9 +14,10 @@ from raglab_retrievers.hybrid_retriever import HybridRetriever
 from raglab_retrievers.mmr_retriever import MMRRetriever
 from raglab_retrievers.reranker_retriever import ReRankerRetriever
 from raglab_retrievers.compression_retriever import CompressionRetriever
+from raglab_retrievers.graph_retriever import GraphRetriever
 from raglab_retrievers.factory import RetrieverFactory
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "BaseRetriever", "RetrieverFactory",
@@ -25,5 +26,5 @@ __all__ = [
     "HybridRetriever",
     "MMRRetriever",
     "ReRankerRetriever",
-    "CompressionRetriever",
+    "CompressionRetriever", "GraphRetriever",
 ]

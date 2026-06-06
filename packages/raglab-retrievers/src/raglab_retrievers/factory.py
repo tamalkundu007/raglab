@@ -21,6 +21,7 @@ from raglab_retrievers.hybrid_retriever import HybridRetriever
 from raglab_retrievers.mmr_retriever import MMRRetriever
 from raglab_retrievers.reranker_retriever import ReRankerRetriever
 from raglab_retrievers.compression_retriever import CompressionRetriever
+from raglab_retrievers.graph_retriever import GraphRetriever
 
 log = get_logger(__name__)
 
@@ -31,6 +32,7 @@ _REGISTRY: dict[str, type[BaseRetriever]] = {
     RetrieverType.MMR:         MMRRetriever,
     RetrieverType.RERANKER:    ReRankerRetriever,
     RetrieverType.COMPRESSION: CompressionRetriever,
+    RetrieverType.GRAPH:       GraphRetriever,
 }
 
 _ACTIVE_TYPES = set(_REGISTRY.keys())  # all active in R3

@@ -42,6 +42,7 @@ class RetrieverType(str, Enum):
     MMR = "mmr"
     RERANKER = "reranker"
     COMPRESSION = "compression"
+    GRAPH = "graph"
 
 
 class VectorStoreType(str, Enum):
