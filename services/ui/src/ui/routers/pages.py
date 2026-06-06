@@ -23,6 +23,8 @@ def _ctx(request: Request) -> dict:
         "app_version": getattr(settings, "app_version", "R1"),
         "control_panel_url": "/",
         "comparison_url": "/compare",
+        "graph_url": "/graph",
+        "graph_service_url": getattr(settings, "graph_service_url", "http://graph:8010"),
     }
 
 
@@ -42,5 +44,15 @@ async def comparison(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="comparison.html",
+        context=_ctx(request),
+    )
+
+
+@router.get("/graph", response_class=HTMLResponse)
+async def graph_explorer(request: Request) -> HTMLResponse:
+    """Serve the Graph Explorer page (R4)."""
+    return templates.TemplateResponse(
+        request=request,
+        name="graph.html",
         context=_ctx(request),
     )

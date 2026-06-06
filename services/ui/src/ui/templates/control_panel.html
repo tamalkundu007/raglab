@@ -546,6 +546,14 @@
         Compare
         <span class="nav-badge" style="color:#5e9cf5;border-color:rgba(94,156,245,.3)">R3</span>
       </a>
+      <a class="nav-item" href="/graph" style="text-decoration:none">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="3" cy="8" r="2"/><circle cx="13" cy="3" r="2"/><circle cx="13" cy="13" r="2"/>
+          <line x1="5" y1="7.5" x2="11" y2="4"/><line x1="5" y1="8.5" x2="11" y2="12"/>
+        </svg>
+        Graph Explorer
+        <span class="nav-badge" style="color:#a78bfa;border-color:rgba(167,139,250,.3)">R4</span>
+      </a>
       <div class="nav-item" onclick="showPage('ingest', this)">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M8 2v8M4 6l4-4 4 4"/><path d="M2 12h12v2H2z"/>
@@ -894,25 +902,33 @@
         </div>
       </div>
 
-      <!-- R4+ STUBS -->
       <div class="section">
         <div class="section-header">
           <span class="section-title">GraphRAG</span>
-          <span class="section-release stub">R4 — Coming Soon</span>
+          <span class="section-release r1">R4 Active</span>
         </div>
         <div class="knobs-grid">
           <div class="knob disabled">
-            <div class="knob-label">Graph Backend <span class="coming-soon-pill">R4</span></div>
-            <select disabled><option>NetworkX (in-memory)</option><option>Neo4j</option></select>
+            <div class="knob-label">Graph Mode</div>
+            <select id="graph-mode">
+              <option value="hybrid">Hybrid — Dense + Graph Expansion</option>
+              <option value="classical">Classical — Dense Only</option>
+              <option value="graph">Graph — Traversal Only</option>
+            </select>
           </div>
           <div class="knob disabled">
-            <div class="knob-label">Community Detection <span class="coming-soon-pill">R4</span></div>
-            <select disabled><option>Leiden Algorithm</option><option>Louvain</option></select>
+            <div class="knob-label">Community Detection</div>
+            <select id="community-detection">
+              <option value="leiden">Leiden Algorithm</option>
+              <option value="none">Disabled</option>
+            </select>
           </div>
           <div class="knob disabled">
-            <div class="knob-label">Graph Depth <span class="coming-soon-pill">R4</span></div>
-            <input type="range" min="1" max="5" value="2" disabled>
-            <div class="range-value">2</div>
+            <div class="knob-label">Traversal Depth</div>
+            <input type="range" id="graph-traversal-depth" min="1" max="5" step="1" value="2"
+              oninput="document.getElementById('graph-depth-val').textContent = this.value">
+            <div class="range-value" id="graph-depth-val">2</div>
+            <div class="range-labels"><span>1</span><span>5</span></div>
           </div>
         </div>
       </div>

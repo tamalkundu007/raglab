@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab — Graph Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <style>
+    :root {
+      --bg:      #0a0a0f;
+      --surface: #111118;
+      --card:    #1c1c25;
+      --elevated:#18181f;
+
+      --gold:       #d4a843;
+      --gold-dim:   rgba(212,168,67,.12);
+      --gold-glow:  rgba(212,168,67,.18);
+
+      --text:   #f0ede8;
+      --muted:  #9a9490;
+      --dim:    #5a5650;
+
+      --border:     rgba(212,168,67,.15);
+      --border-hi:  rgba(212,168,67,.45);
+
+      --green:  #3ecf8e;
+      --blue:   #5e9cf5;
+      --orange: #f0944d;
+      --purple: #a78bfa;
+      --teal:   #2dd4bf;
+      --red:    #f26464;
+
+      --mono:    'JetBrains Mono', monospace;
+      --display: 'Syne', sans-serif;
+      --ui:      'Space Mono', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.6; overflow: hidden; height: 100vh; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(212,168,67,.25); border-radius: 3px; }
+
+    /* ── Topbar ── */
+    .topbar {
+      display: flex; align-items: center; gap: 14px;
+      padding: 0 20px; height: 50px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    }
+    .logo { font-family: var(--display); font-size: 15px; font-weight: 800; color: var(--gold); text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .logo-hex { width: 22px; height: 22px; background: var(--gold); clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%); display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--bg); font-weight: 800; }
+    .badge { font-family: var(--ui); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: .08em; text-transform: uppercase; }
+    .badge-r4 { background: rgba(167,139,250,.12); color: var(--purple); border: 1px solid rgba(167,139,250,.3); }
+    .topbar-spacer { flex: 1; }
+    .back-link { font-family: var(--ui); font-size: 11px; color: var(--muted); text-decoration: none; transition: color .15s; }
+    .back-link:hover { color: var(--gold); }
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 5px; font-family: var(--ui); font-size: 10px; font-weight: 700; letter-spacing: .05em; cursor: pointer; transition: all .15s; border: 1px solid transparent; }
+    .btn-primary { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+    .btn-primary:hover { background: #e8bb55; box-shadow: 0 0 12px var(--gold-glow); }
+    .btn-ghost { background: var(--elevated); color: var(--muted); border-color: var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-hi); }
+    .btn:disabled { opacity: .4; pointer-events: none; }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr 260px;
+      height: calc(100vh - 50px);
+      margin-top: 50px;
+    }
+
+    /* ── Left panel — controls ── */
+    .panel-left {
+      background: var(--surface); border-right: 1px solid var(--border);
+      padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+    }
+    .panel-title { font-family: var(--ui); font-size: 9px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+    .control-group { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label { font-size: 9px; font-family: var(--ui); text-transform: uppercase; letter-spacing: .1em; color: var(--dim); }
+    select, input[type="text"], input[type="number"] {
+      background: var(--elevated); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 12px;
+      padding: 5px 8px; outline: none; transition: border-color .15s; width: 100%;
+    }
+    select:focus, input:focus { border-color: var(--border-hi); }
+    select { appearance: none; padding-right: 20px; cursor: pointer;
+             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23d4a843'/%3E%3C/svg%3E");
+             background-repeat: no-repeat; background-position: right 7px center; }
+    .range-row { display: flex; align-items: center; gap: 8px; }
+    input[type="range"] { flex: 1; -webkit-appearance: none; height: 3px; background: var(--elevated); border-radius: 2px; outline: none; border: none; padding: 0; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--gold); cursor: pointer; }
+    .range-val { font-family: var(--ui); font-size: 10px; color: var(--gold); min-width: 28px; text-align: right; }
+
+    /* ── Centre — canvas ── */
+    .canvas-wrap {
+      position: relative; overflow: hidden; background: var(--bg);
+      background-image: radial-gradient(circle, rgba(212,168,67,.04) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    #graph-svg { width: 100%; height: 100%; }
+    .empty-state {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 12px; pointer-events: none;
+    }
+    .empty-state svg { opacity: .2; }
+    .empty-state p { font-size: 12px; color: var(--dim); text-align: center; max-width: 220px; }
+
+    /* ── Right panel — inspector ── */
+    .panel-right {
+      background: var(--surface); border-left: 1px solid var(--border);
+      padding: 16px; overflow-y: auto;
+    }
+    .inspector-empty { color: var(--dim); font-size: 11px; text-align: center; padding-top: 32px; }
+    .inspector-field { margin-bottom: 10px; }
+    .inspector-label { font-family: var(--ui); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--dim); margin-bottom: 3px; }
+    .inspector-value { font-size: 12px; color: var(--text); word-break: break-all; }
+    .chip { display: inline-flex; padding: 1px 6px; border-radius: 3px; font-family: var(--ui); font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .edge-list { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+    .edge-item { background: var(--elevated); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; font-size: 11px; }
+    .edge-item .rel { color: var(--gold); font-family: var(--ui); font-size: 9px; }
+    .edge-item .node-name { color: var(--text); }
+
+    /* ── Status bar ── */
+    .status-bar {
+      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+      padding: 5px 14px; font-family: var(--ui); font-size: 10px; color: var(--muted);
+      display: flex; gap: 14px; pointer-events: none; white-space: nowrap;
+    }
+    .status-bar span strong { color: var(--text); }
+
+    /* ── D3 graph elements ── */
+    .node circle { stroke-width: 1.5px; cursor: pointer; transition: r .15s; }
+    .node text { font-size: 10px; font-family: var(--mono); pointer-events: none; }
+    .link { stroke-opacity: .5; }
+    .link-label { font-size: 8px; font-family: var(--mono); fill: var(--dim); pointer-events: none; }
+
+    /* ── Tooltip ── */
+    #tooltip {
+      position: absolute; padding: 8px 10px; background: var(--card);
+      border: 1px solid var(--border-hi); border-radius: 6px;
+      font-size: 11px; pointer-events: none; opacity: 0; transition: opacity .15s;
+      max-width: 200px; z-index: 50;
+    }
+
+    /* ── Spinner ── */
+    .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Community legend ── */
+    .legend { position: absolute; top: 12px; right: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 10px; }
+    .legend-title { font-family: var(--ui); font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    @media (max-width: 900px) { .layout { grid-template-columns: 240px 1fr; } .panel-right { display: none; } }
+  </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+  <a class="logo" href="{{ control_panel_url }}">
+    <div class="logo-hex">R</div>
+    RAGLab
+  </a>
+  <span class="badge badge-r4">R4 · Graph Explorer</span>
+  <div class="topbar-spacer"></div>
+  <button class="btn btn-primary" id="build-btn" onclick="buildGraph()">
+    <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a5 5 0 110 10A5 5 0 018 3zm-1 5V5h2v5H7zm0 2h2v2H7v-2z"/></svg>
+    Build Graph
+  </button>
+  <button class="btn btn-ghost" id="reset-btn" onclick="resetView()" disabled>Reset View</button>
+  <a class="back-link" href="{{ control_panel_url }}">← Control Panel</a>
+</header>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- Left: controls -->
+  <div class="panel-left">
+
+    <div class="control-group">
+      <div class="panel-title">Collection</div>
+      <div class="field">
+        <label>Collection Name</label>
+        <input type="text" id="collection" value="raglab">
+      </div>
+      <div class="field">
+        <label>Graph Service URL</label>
+        <input type="text" id="graph-url" value="{{ graph_service_url }}">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="panel-title">Build Options</div>
+      <div class="field">
+        <label>Community Detection</label>
+        <select id="community-detection">
+          <option value="true">Enabled (Leiden)</option>
+          <option value="false">Disabled</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Leiden Resolution</label>
+        <div class="range-row">
+          <input type="range" id="leiden-res" min="1" max="100" step="1" value="10"
+            oninput="document.getElementById('leiden-res-val').textContent = (this.value/10).toFixed(1)">
+          <span class="range-val" id="leiden-res-val">1.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="panel-title">Traversal Query</div>
+      <div class="field">
+        <label>Start Entity Name</label>
+        <input type="text" id="query-entity" placeholder="e.g. RAG">
+      </div>
+      <div class="field">
+        <label>Traversal Depth</label>
+        <div class="range-row">
+          <input type="range" id="traversal-depth" min="1" max="5" step="1" value="2"
+            oninput="document.getElementById('depth-val').textContent = this.value">
+          <span class="range-val" id="depth-val">2</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:4px"
+              onclick="traverseFromEntity()">Traverse</button>
+    </div>
+
+    <div class="control-group">
+      <div class="panel-title">Display</div>
+      <div class="field">
+        <label>Node Size By</label>
+        <select id="node-size-by">
+          <option value="degree">Degree (connections)</option>
+          <option value="uniform">Uniform</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Colour By</label>
+        <select id="colour-by">
+          <option value="community">Community</option>
+          <option value="type">Entity Type</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Show Relation Labels</label>
+        <select id="show-labels">
+          <option value="false">Hidden (clean)</option>
+          <option value="true">Visible</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Link Strength</label>
+        <div class="range-row">
+          <input type="range" id="link-strength" min="1" max="10" step="1" value="3"
+            oninput="document.getElementById('link-strength-val').textContent = this.value; rerenderForce()">
+          <span class="range-val" id="link-strength-val">3</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="stats-panel" style="display:none" class="control-group">
+      <div class="panel-title">Graph Stats</div>
+      <div id="stats-content" style="font-size:11px;color:var(--muted);line-height:1.9"></div>
+    </div>
+  </div>
+
+  <!-- Centre: canvas -->
+  <div class="canvas-wrap" id="canvas-wrap">
+    <svg id="graph-svg"></svg>
+
+    <div class="empty-state" id="empty-state">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+        <circle cx="14" cy="28" r="6" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="42" cy="14" r="6" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="42" cy="42" r="6" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="20" y1="26" x2="36" y2="16" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="20" y1="30" x2="36" y2="40" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="42" y1="20" x2="42" y2="36" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      <p>Build the knowledge graph from extracted entities to explore connections.</p>
+    </div>
+
+    <div class="status-bar" id="status-bar" style="display:none">
+      <span>Nodes: <strong id="stat-nodes">0</strong></span>
+      <span>Edges: <strong id="stat-edges">0</strong></span>
+      <span>Communities: <strong id="stat-communities">0</strong></span>
+    </div>
+
+    <div id="legend" class="legend" style="display:none">
+      <div class="legend-title">Communities</div>
+      <div id="legend-items"></div>
+    </div>
+
+    <div id="tooltip"></div>
+  </div>
+
+  <!-- Right: inspector -->
+  <div class="panel-right" id="panel-right">
+    <div class="panel-title">Inspector</div>
+    <div id="inspector-content">
+      <div class="inspector-empty">Click a node to inspect its entity details and connections.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────────
+const API_BASE = '{{ api_base }}';
+const GRAPH_SERVICE_URL_DEFAULT = '{{ graph_service_url }}';
+
+// ── Colour palettes ────────────────────────────────────────────────────────────
+const COMMUNITY_COLOURS = [
+  '#d4a843','#3ecf8e','#5e9cf5','#a78bfa','#f0944d','#2dd4bf',
+  '#f26464','#facc15','#34d399','#818cf8','#fb7185','#38bdf8',
+];
+
+const TYPE_COLOURS = {
+  PERSON:       '#5e9cf5',
+  ORGANIZATION: '#3ecf8e',
+  CONCEPT:      '#d4a843',
+  TECHNOLOGY:   '#a78bfa',
+  LOCATION:     '#f0944d',
+  PRODUCT:      '#2dd4bf',
+  DEFAULT:      '#9a9490',
+};
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let graphData = { nodes: [], links: [] };
+let simulation = null;
+let svg = null;
+let zoomBehavior = null;
+let selectedNodeId = null;
+
+// ── Graph service helpers ──────────────────────────────────────────────────────
+function graphServiceUrl() {
+  return document.getElementById('graph-url').value.trim().replace(/\/$/, '');
+}
+
+function collection() {
+  return document.getElementById('collection').value.trim() || 'raglab';
+}
+
+// ── Build graph ────────────────────────────────────────────────────────────────
+async function buildGraph() {
+  const btn = document.getElementById('build-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Building…';
+  showEmptyState(false);
+
+  try {
+    const leidenRes = parseFloat(document.getElementById('leiden-res-val').textContent) || 1.0;
+    const communityDetection = document.getElementById('community-detection').value === 'true';
+
+    // POST /graph/build
+    const buildResp = await fetch(`${graphServiceUrl()}/graph/build`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        collection: collection(),
+        force_rebuild: true,
+        enable_community_detection: communityDetection,
+        leiden_resolution: leidenRes,
+      }),
+    });
+
+    if (!buildResp.ok) {
+      const err = await buildResp.json().catch(() => ({ detail: buildResp.statusText }));
+      throw new Error(err.detail || `HTTP ${buildResp.status}`);
+    }
+
+    const buildResult = await buildResp.json();
+
+    // Fetch entities and relationships
+    const [entResp, relResp] = await Promise.all([
+      fetch(`${graphServiceUrl()}/graph/entities?collection=${collection()}&limit=500`),
+      fetch(`${graphServiceUrl()}/graph/relationships?collection=${collection()}&limit=1000`),
+    ]);
+
+    const entities = entResp.ok ? await entResp.json() : [];
+    const relationships = relResp.ok ? await relResp.json() : [];
+
+    // Transform to D3 format
+    graphData = buildD3Data(entities, relationships);
+
+    // Update stats panel
+    updateStats(buildResult, graphData);
+
+    // Render
+    renderGraph();
+
+    document.getElementById('reset-btn').disabled = false;
+
+  } catch (err) {
+    showToast(`Build failed: ${err.message}`, 'error');
+    showEmptyState(true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a5 5 0 110 10A5 5 0 018 3zm-1 5V5h2v5H7zm0 2h2v2H7v-2z"/></svg> Build Graph`;
+  }
+}
+
+// ── D3 data builder ────────────────────────────────────────────────────────────
+function buildD3Data(entities, relationships) {
+  const nodeMap = {};
+  const nodes = entities.map((e, i) => {
+    const n = {
+      id: e.id,
+      name: e.name,
+      entity_type: e.entity_type,
+      collection: e.collection,
+      description: e.description || '',
+      community_id: null,
+    };
+    nodeMap[e.id] = n;
+    return n;
+  });
+
+  const links = relationships
+    .filter(r => nodeMap[r.source_id] && nodeMap[r.target_id])
+    .map(r => ({
+      id: r.id,
+      source: r.source_id,
+      target: r.target_id,
+      relation_type: r.relation_type,
+      weight: r.weight || 1.0,
+    }));
+
+  return { nodes, links };
+}
+
+// ── Assign community colours ────────────────────────────────────────────────────
+async function fetchAndAssignCommunities() {
+  try {
+    const resp = await fetch(`${graphServiceUrl()}/graph/communities?collection=${collection()}`);
+    if (!resp.ok) return;
+    const communities = await resp.json();
+    const idToComm = {};
+    communities.forEach(c => {
+      // communities endpoint doesn't return entity_ids — use node endpoint
+    });
+    // Fetch community info from node attrs via /graph/node for sampled nodes
+    // For now assign community_id via /graph/entities extended query
+    return communities;
+  } catch { return []; }
+}
+
+// ── Render D3 graph ────────────────────────────────────────────────────────────
+function renderGraph() {
+  const wrap = document.getElementById('canvas-wrap');
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+
+  const colourBy = document.getElementById('colour-by').value;
+  const nodeSizeBy = document.getElementById('node-size-by').value;
+  const showLabels = document.getElementById('show-labels').value === 'true';
+  const linkStrength = parseInt(document.getElementById('link-strength').value) / 10;
+
+  // Degree map for node sizing
+  const degreeMap = {};
+  graphData.nodes.forEach(n => { degreeMap[n.id] = 0; });
+  graphData.links.forEach(l => {
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    degreeMap[sid] = (degreeMap[sid] || 0) + 1;
+    degreeMap[tid] = (degreeMap[tid] || 0) + 1;
+  });
+  const maxDeg = Math.max(1, ...Object.values(degreeMap));
+
+  function nodeRadius(d) {
+    if (nodeSizeBy === 'degree') return 6 + 12 * (degreeMap[d.id] || 0) / maxDeg;
+    return 8;
+  }
+
+  function nodeColour(d) {
+    if (colourBy === 'community' && d.community_id != null) {
+      return COMMUNITY_COLOURS[d.community_id % COMMUNITY_COLOURS.length];
+    }
+    return TYPE_COLOURS[d.entity_type] || TYPE_COLOURS.DEFAULT;
+  }
+
+  // Clear previous
+  d3.select('#graph-svg').selectAll('*').remove();
+
+  svg = d3.select('#graph-svg')
+    .attr('width', W)
+    .attr('height', H);
+
+  // Zoom
+  const g = svg.append('g').attr('class', 'zoom-group');
+  zoomBehavior = d3.zoom()
+    .scaleExtent([0.1, 6])
+    .on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoomBehavior);
+
+  // Arrow marker
+  svg.append('defs').append('marker')
+    .attr('id', 'arrowhead')
+    .attr('viewBox', '0 -4 8 8')
+    .attr('refX', 16).attr('refY', 0)
+    .attr('markerWidth', 6).attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path').attr('d', 'M0,-4L8,0L0,4').attr('fill', 'rgba(212,168,67,.4)');
+
+  // Force simulation
+  simulation = d3.forceSimulation(graphData.nodes)
+    .force('link', d3.forceLink(graphData.links).id(d => d.id).strength(linkStrength).distance(100))
+    .force('charge', d3.forceManyBody().strength(-220))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d) + 6));
+
+  // Links
+  const link = g.append('g').attr('class', 'links')
+    .selectAll('line')
+    .data(graphData.links)
+    .join('line')
+    .attr('class', 'link')
+    .attr('stroke', 'rgba(212,168,67,.3)')
+    .attr('stroke-width', d => Math.max(1, d.weight))
+    .attr('marker-end', 'url(#arrowhead)');
+
+  // Link labels
+  const linkLabel = g.append('g').attr('class', 'link-labels')
+    .selectAll('text')
+    .data(graphData.links)
+    .join('text')
+    .attr('class', 'link-label')
+    .attr('text-anchor', 'middle')
+    .attr('visibility', showLabels ? 'visible' : 'hidden')
+    .text(d => d.relation_type);
+
+  // Nodes
+  const node = g.append('g').attr('class', 'nodes')
+    .selectAll('g')
+    .data(graphData.nodes)
+    .join('g')
+    .attr('class', 'node')
+    .call(d3.drag()
+      .on('start', dragstarted)
+      .on('drag', dragged)
+      .on('end', dragended));
+
+  node.append('circle')
+    .attr('r', d => nodeRadius(d))
+    .attr('fill', d => nodeColour(d) + '33')
+    .attr('stroke', d => nodeColour(d));
+
+  node.append('text')
+    .attr('dx', d => nodeRadius(d) + 4)
+    .attr('dy', '0.35em')
+    .attr('fill', 'var(--text)')
+    .text(d => d.name.length > 18 ? d.name.slice(0, 16) + '…' : d.name);
+
+  // Node interaction
+  node.on('click', (event, d) => {
+    event.stopPropagation();
+    selectNode(d);
+    highlightNeighbours(d);
+  });
+
+  node.on('mouseover', (event, d) => showTooltip(event, d));
+  node.on('mousemove', (event) => moveTooltip(event));
+  node.on('mouseout', hideTooltip);
+
+  svg.on('click', () => {
+    clearSelection();
+    restoreHighlight(node, link);
+  });
+
+  // Tick
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+
+    linkLabel
+      .attr('x', d => (d.source.x + d.target.x) / 2)
+      .attr('y', d => (d.source.y + d.target.y) / 2);
+
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+
+  // Update status bar
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('status-bar').style.display = 'flex';
+  document.getElementById('stat-nodes').textContent = graphData.nodes.length;
+  document.getElementById('stat-edges').textContent = graphData.links.length;
+
+  // Community legend
+  buildLegend(colourBy);
+}
+
+// ── Highlight neighbours ───────────────────────────────────────────────────────
+function highlightNeighbours(selected) {
+  const wrap = d3.select('.nodes');
+  const linkWrap = d3.select('.links');
+
+  const neighbourIds = new Set([selected.id]);
+  graphData.links.forEach(l => {
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    if (sid === selected.id) neighbourIds.add(tid);
+    if (tid === selected.id) neighbourIds.add(sid);
+  });
+
+  wrap.selectAll('.node circle')
+    .attr('opacity', d => neighbourIds.has(d.id) ? 1.0 : 0.15);
+  wrap.selectAll('.node text')
+    .attr('opacity', d => neighbourIds.has(d.id) ? 1.0 : 0.1);
+
+  linkWrap.selectAll('line')
+    .attr('opacity', d => {
+      const sid = typeof d.source === 'object' ? d.source.id : d.source;
+      const tid = typeof d.target === 'object' ? d.target.id : d.target;
+      return (sid === selected.id || tid === selected.id) ? 1.0 : 0.05;
+    });
+}
+
+function restoreHighlight(node, link) {
+  node.selectAll('circle').attr('opacity', 1);
+  node.selectAll('text').attr('opacity', 1);
+  link.attr('opacity', 1);
+}
+
+function clearSelection() {
+  selectedNodeId = null;
+  document.getElementById('inspector-content').innerHTML =
+    '<div class="inspector-empty">Click a node to inspect its entity details and connections.</div>';
+}
+
+// ── Node inspector ─────────────────────────────────────────────────────────────
+function selectNode(d) {
+  selectedNodeId = d.id;
+  const outgoing = graphData.links.filter(l => {
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    return sid === d.id;
+  });
+  const incoming = graphData.links.filter(l => {
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    return tid === d.id;
+  });
+
+  const typeColour = TYPE_COLOURS[d.entity_type] || TYPE_COLOURS.DEFAULT;
+
+  const outgoingHtml = outgoing.map(l => {
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    const tname = graphData.nodes.find(n => n.id === tid)?.name || tid.slice(0,8);
+    return `<div class="edge-item"><div class="rel">${l.relation_type}</div><div class="node-name">→ ${escHtml(tname)}</div></div>`;
+  }).join('');
+
+  const incomingHtml = incoming.map(l => {
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const sname = graphData.nodes.find(n => n.id === sid)?.name || sid.slice(0,8);
+    return `<div class="edge-item"><div class="rel">${l.relation_type}</div><div class="node-name">← ${escHtml(sname)}</div></div>`;
+  }).join('');
+
+  document.getElementById('inspector-content').innerHTML = `
+    <div class="inspector-field">
+      <div class="inspector-label">Name</div>
+      <div class="inspector-value" style="font-weight:600">${escHtml(d.name)}</div>
+    </div>
+    <div class="inspector-field">
+      <div class="inspector-label">Type</div>
+      <span class="chip" style="background:${typeColour}22;color:${typeColour};border:1px solid ${typeColour}44">${escHtml(d.entity_type)}</span>
+    </div>
+    ${d.description ? `<div class="inspector-field"><div class="inspector-label">Description</div><div class="inspector-value" style="color:var(--muted)">${escHtml(d.description)}</div></div>` : ''}
+    ${d.community_id != null ? `<div class="inspector-field"><div class="inspector-label">Community</div><span class="chip" style="background:var(--gold-dim);color:var(--gold);border:1px solid var(--border-hi)">#${d.community_id}</span></div>` : ''}
+    <div class="inspector-field">
+      <div class="inspector-label">Connections (${outgoing.length + incoming.length})</div>
+      <div class="edge-list">
+        ${outgoingHtml}${incomingHtml}
+        ${outgoing.length + incoming.length === 0 ? '<div style="color:var(--dim);font-size:11px">No connections.</div>' : ''}
+      </div>
+    </div>
+    <div class="inspector-field" style="margin-top:12px">
+      <div class="inspector-label">ID</div>
+      <div class="inspector-value" style="font-size:9px;color:var(--dim)">${d.id}</div>
+    </div>
+  `;
+}
+
+// ── Traversal query ────────────────────────────────────────────────────────────
+async function traverseFromEntity() {
+  const entityName = document.getElementById('query-entity').value.trim().toLowerCase();
+  const depth = parseInt(document.getElementById('traversal-depth').value);
+
+  if (!entityName) { showToast('Enter an entity name to traverse from.', 'warn'); return; }
+
+  const startNode = graphData.nodes.find(n => n.name.toLowerCase() === entityName);
+  if (!startNode) {
+    showToast(`Entity "${entityName}" not found in current graph.`, 'warn');
+    return;
+  }
+
+  // BFS on client-side graph
+  const visited = new Set([startNode.id]);
+  let frontier = new Set([startNode.id]);
+
+  for (let hop = 0; hop < depth; hop++) {
+    const next = new Set();
+    graphData.links.forEach(l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      if (frontier.has(sid) && !visited.has(tid)) { next.add(tid); visited.add(tid); }
+      if (frontier.has(tid) && !visited.has(sid)) { next.add(sid); visited.add(sid); }
+    });
+    frontier = next;
+  }
+
+  // Highlight traversal subgraph
+  d3.select('.nodes').selectAll('.node circle')
+    .attr('opacity', d => visited.has(d.id) ? 1.0 : 0.1);
+  d3.select('.nodes').selectAll('.node text')
+    .attr('opacity', d => visited.has(d.id) ? 1.0 : 0.05);
+  d3.select('.links').selectAll('line')
+    .attr('opacity', d => {
+      const sid = typeof d.source === 'object' ? d.source.id : d.source;
+      const tid = typeof d.target === 'object' ? d.target.id : d.target;
+      return visited.has(sid) && visited.has(tid) ? 1.0 : 0.03;
+    });
+
+  showToast(`Traversal: ${visited.size} nodes reachable from "${startNode.name}" at depth ${depth}.`, 'ok');
+}
+
+// ── Legend ────────────────────────────────────────────────────────────────────
+function buildLegend(colourBy) {
+  const legend = document.getElementById('legend');
+  const items = document.getElementById('legend-items');
+  items.innerHTML = '';
+
+  if (colourBy === 'community') {
+    const communityIds = [...new Set(graphData.nodes.map(n => n.community_id).filter(c => c != null))].sort((a,b)=>a-b);
+    if (communityIds.length === 0) { legend.style.display = 'none'; return; }
+    communityIds.slice(0, 8).forEach(cid => {
+      const colour = COMMUNITY_COLOURS[cid % COMMUNITY_COLOURS.length];
+      const count = graphData.nodes.filter(n => n.community_id === cid).length;
+      items.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${colour}"></div><span style="color:var(--muted)">Community ${cid} (${count})</span></div>`;
+    });
+  } else {
+    const types = [...new Set(graphData.nodes.map(n => n.entity_type))].sort();
+    types.forEach(t => {
+      const colour = TYPE_COLOURS[t] || TYPE_COLOURS.DEFAULT;
+      items.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${colour}"></div><span style="color:var(--muted)">${t}</span></div>`;
+    });
+  }
+  legend.style.display = 'block';
+}
+
+// ── Stats panel ────────────────────────────────────────────────────────────────
+function updateStats(buildResult, graphData) {
+  document.getElementById('stats-panel').style.display = 'block';
+  document.getElementById('stats-content').innerHTML = `
+    <div>Nodes: <strong style="color:var(--text)">${buildResult.node_count}</strong></div>
+    <div>Edges: <strong style="color:var(--text)">${buildResult.edge_count}</strong></div>
+    <div>Communities: <strong style="color:var(--text)">${buildResult.community_count}</strong></div>
+    <div>Build time: <strong style="color:var(--gold)">${buildResult.build_time_ms?.toFixed(0)}ms</strong></div>
+  `;
+  document.getElementById('stat-communities').textContent = buildResult.community_count;
+}
+
+// ── Drag handlers ──────────────────────────────────────────────────────────────
+function dragstarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+function dragended(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  d.fx = null; d.fy = null;
+}
+
+// ── Tooltip ────────────────────────────────────────────────────────────────────
+function showTooltip(event, d) {
+  const tt = document.getElementById('tooltip');
+  tt.innerHTML = `<strong>${escHtml(d.name)}</strong><br><span style="color:var(--dim)">${d.entity_type}</span>`;
+  tt.style.opacity = '1';
+  moveTooltip(event);
+}
+function moveTooltip(event) {
+  const tt = document.getElementById('tooltip');
+  const wrap = document.getElementById('canvas-wrap').getBoundingClientRect();
+  tt.style.left = (event.clientX - wrap.left + 12) + 'px';
+  tt.style.top = (event.clientY - wrap.top - 10) + 'px';
+}
+function hideTooltip() { document.getElementById('tooltip').style.opacity = '0'; }
+
+// ── Reset view ─────────────────────────────────────────────────────────────────
+function resetView() {
+  if (svg && zoomBehavior) {
+    svg.transition().duration(400).call(zoomBehavior.transform, d3.zoomIdentity);
+  }
+}
+
+// ── Rerender with new force params ────────────────────────────────────────────
+function rerenderForce() {
+  if (graphData.nodes.length === 0) return;
+  renderGraph();
+}
+
+// ── Show/hide empty state ──────────────────────────────────────────────────────
+function showEmptyState(show) {
+  document.getElementById('empty-state').style.display = show ? 'flex' : 'none';
+  document.getElementById('status-bar').style.display = show ? 'none' : 'flex';
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, type = 'ok') {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    Object.assign(t.style, {
+      position:'fixed',bottom:'20px',right:'20px',background:'var(--card)',
+      border:'1px solid var(--border-hi)',borderRadius:'8px',padding:'10px 14px',
+      fontFamily:'var(--mono)',fontSize:'12px',color:'var(--text)',
+      boxShadow:'0 8px 24px rgba(0,0,0,.5)',transition:'all 300ms ease',
+      opacity:'0',transform:'translateY(16px)',zIndex:'999',
+    });
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.borderColor = type === 'ok' ? 'var(--green)' : type === 'warn' ? 'var(--orange)' : 'var(--red)';
+  t.style.opacity = '1'; t.style.transform = 'translateY(0)';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(16px)'; }, 3000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Handle window resize
+window.addEventListener('resize', () => { if (graphData.nodes.length > 0) renderGraph(); });
+
+// Colour-by and node-size react to knob changes
+document.getElementById('colour-by').addEventListener('change', () => { if (graphData.nodes.length > 0) renderGraph(); });
+document.getElementById('node-size-by').addEventListener('change', () => { if (graphData.nodes.length > 0) renderGraph(); });
+document.getElementById('show-labels').addEventListener('change', () => { if (graphData.nodes.length > 0) renderGraph(); });
+</script>
+</body>
+</html>

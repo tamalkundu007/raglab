@@ -10,6 +10,7 @@ class UISettings(BaseServiceSettings):
     # API gateway URL — all UI calls go through the gateway
     gateway_url: str = "http://api-gateway:8000"
     api_base: str = "/api/v1"
+    graph_service_url: str = "http://graph:8010"
 
     # UI metadata
     app_title: str = "RAGLab"
