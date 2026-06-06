@@ -427,9 +427,8 @@ class TestFactoryR2:
         for t in ["pdf", "docx", "markdown", "html", "excel"]:
             assert entries[t]["active"] is True
 
-    def test_table_stitch_still_stub(self):
-        # pdf_images activated in R4; table_stitch activates in R4 Phase 3
-        from raglab_common.exceptions import NotImplementedFeatureError
-        from raglab_chunkers import ChunkerFactory
-        with pytest.raises(NotImplementedFeatureError):
-            ChunkerFactory.create("table_stitch")
+    def test_all_r4_chunkers_active(self):
+        # Both pdf_images and table_stitch are active in R4
+        from raglab_chunkers import ChunkerFactory, PDFImageChunker, TableStitchChunker
+        assert isinstance(ChunkerFactory.create("pdf_images", config={"tokenizer": "word_count"}), PDFImageChunker)
+        assert isinstance(ChunkerFactory.create("table_stitch", config={"tokenizer": "word_count"}), TableStitchChunker)

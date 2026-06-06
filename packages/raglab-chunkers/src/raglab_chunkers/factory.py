@@ -23,6 +23,7 @@ from raglab_chunkers.html_chunker import HTMLChunker
 from raglab_chunkers.excel_chunker import ExcelChunker
 from raglab_chunkers.hybrid_chunker import HybridChunker
 from raglab_chunkers.pdf_image_chunker import PDFImageChunker
+from raglab_chunkers.table_stitch_chunker import TableStitchChunker
 
 log = get_logger(__name__)
 
@@ -61,13 +62,13 @@ _REGISTRY: dict[str, type[BaseChunker]] = {
     "hybrid":            HybridChunker,
     # R2 stubs
     ChunkerType.PDF_IMAGES:   PDFImageChunker,
-    ChunkerType.TABLE_STITCH: _make_stub("table_stitch", "R2-extended"),
+    ChunkerType.TABLE_STITCH: TableStitchChunker,
 }
 
 _ACTIVE_TYPES = {
     ChunkerType.TEXT, ChunkerType.PDF, ChunkerType.DOCX,
     ChunkerType.MARKDOWN, ChunkerType.HTML, ChunkerType.EXCEL,
-    ChunkerType.PDF_IMAGES,
+    ChunkerType.PDF_IMAGES, ChunkerType.TABLE_STITCH,
 }
 _ACTIVE_STRINGS = {"hybrid"}  # meta-types not in ChunkerType enum
 

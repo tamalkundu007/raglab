@@ -462,11 +462,10 @@ class TestPDFImageChunkerFactory:
         entries = {e["type"]: e for e in ChunkerFactory.available()}
         assert entries["pdf_images"]["active"] is True
 
-    def test_table_stitch_still_stub(self):
-        from raglab_chunkers import ChunkerFactory
-        from raglab_common.exceptions import NotImplementedFeatureError
-        with pytest.raises(NotImplementedFeatureError):
-            ChunkerFactory.create("table_stitch")
+    def test_table_stitch_active_in_r4(self):
+        from raglab_chunkers import ChunkerFactory, TableStitchChunker
+        c = ChunkerFactory.create("table_stitch", config={"tokenizer": "word_count"})
+        assert isinstance(c, TableStitchChunker)
 
     def test_schema_via_factory(self):
         from raglab_chunkers import ChunkerFactory

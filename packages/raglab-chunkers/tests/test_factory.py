@@ -48,9 +48,10 @@ class TestChunkerFactoryCreate:
         c = ChunkerFactory.create("pdf_images", config={"tokenizer": "word_count"})
         assert isinstance(c, PDFImageChunker)
 
-    def test_create_table_stitch_stub_raises(self):
-        with pytest.raises(NotImplementedFeatureError):
-            ChunkerFactory.create("table_stitch")
+    def test_create_table_stitch_active(self):
+        from raglab_chunkers.table_stitch_chunker import TableStitchChunker
+        c = ChunkerFactory.create("table_stitch", config={"tokenizer": "word_count"})
+        assert isinstance(c, TableStitchChunker)
 
     def test_create_unknown_raises_value_error(self):
         with pytest.raises(ValueError, match="Unknown chunker type"):
@@ -66,10 +67,10 @@ class TestChunkerFactoryAvailable:
         for t in ["text", "pdf", "docx", "markdown", "html", "excel"]:
             assert entries[t]["active"] is True, f"{t} should be active"
 
-    def test_stubs_not_active(self):
-        # Only table_stitch remains a stub in R4 Phase 1
+    def test_all_r4_types_active(self):
+        # Both pdf_images and table_stitch are active in R4
         entries = {e["type"]: e for e in ChunkerFactory.available()}
-        assert entries["table_stitch"]["active"] is False
+        assert entries["table_stitch"]["active"] is True
         assert entries["pdf_images"]["active"] is True
 
 
@@ -92,10 +93,9 @@ class TestChunkerFactorySchema:
     def test_excel_schema(self):
         assert "sheet_strategy" in ChunkerFactory.schema("excel")
 
-    def test_stub_schema_accessible(self):
-        # table_stitch is still a stub in R4 Phase 1
+    def test_table_stitch_schema_has_emit_format(self):
         schema = ChunkerFactory.schema("table_stitch")
-        assert "_stub" in schema
+        assert "emit_format" in schema
 
     def test_unknown_raises(self):
         with pytest.raises(ValueError):
