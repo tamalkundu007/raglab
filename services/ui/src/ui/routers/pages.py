@@ -25,6 +25,7 @@ def _ctx(request: Request) -> dict:
         "comparison_url": "/compare",
         "graph_url": "/graph",
         "graph_service_url": getattr(settings, "graph_service_url", "http://graph:8010"),
+        "healing_trace_url": "/healing-trace",
     }
 
 
@@ -54,5 +55,15 @@ async def graph_explorer(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="graph.html",
+        context=_ctx(request),
+    )
+
+
+@router.get("/healing-trace", response_class=HTMLResponse)
+async def healing_trace(request: Request) -> HTMLResponse:
+    """Serve the Self-Healing Trace page (R5)."""
+    return templates.TemplateResponse(
+        request=request,
+        name="healing_trace.html",
         context=_ctx(request),
     )

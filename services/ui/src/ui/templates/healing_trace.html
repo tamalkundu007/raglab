@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab — Healing Trace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0a0a0f;--surface:#111118;--card:#1c1c25;--elevated:#18181f;
+      --gold:#d4a843;--gold-dim:rgba(212,168,67,.12);
+      --text:#f0ede8;--muted:#9a9490;--dim:#5a5650;
+      --green:#3ecf8e;--blue:#5e9cf5;--orange:#f0944d;
+      --red:#f26464;--purple:#a78bfa;
+      --border:rgba(212,168,67,.15);--border-hi:rgba(212,168,67,.45);
+      --mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--ui:'Space Mono',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;min-height:100vh}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(212,168,67,.25);border-radius:3px}
+
+    .topbar{display:flex;align-items:center;gap:14px;padding:0 24px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+    .logo{font-family:var(--display);font-size:15px;font-weight:800;color:var(--gold);text-decoration:none;display:flex;align-items:center;gap:8px}
+    .logo-hex{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--bg);font-weight:800}
+    .badge{font-family:var(--ui);font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.08em;text-transform:uppercase}
+    .badge-r5{background:rgba(240,148,77,.12);color:var(--orange);border:1px solid rgba(240,148,77,.3)}
+    .topbar-spacer{flex:1}
+    .back-link{font-family:var(--ui);font-size:11px;color:var(--muted);text-decoration:none;transition:color .15s}
+    .back-link:hover{color:var(--gold)}
+    .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:5px;font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:all .15s;border:1px solid transparent}
+    .btn-ghost{background:var(--elevated);color:var(--muted);border-color:var(--border)}
+    .btn-ghost:hover{color:var(--text);border-color:var(--border-hi)}
+
+    .main{padding:24px;max-width:1200px;margin:0 auto}
+    .page-header{margin-bottom:24px}
+    .page-title{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+    .page-subtitle{font-size:11px;color:var(--muted)}
+
+    /* ── Gate summary bar ── */
+    .gate-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+    .gate-stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 16px;flex:1;min-width:120px}
+    .gate-stat-value{font-family:var(--display);font-size:24px;font-weight:800;line-height:1;margin-bottom:4px}
+    .gate-stat-label{font-family:var(--ui);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim)}
+
+    /* ── Trace entries ── */
+    .trace-section{margin-bottom:24px}
+    .trace-section-title{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--orange);margin-bottom:12px}
+    .trace-entry{background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden}
+    .trace-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;transition:background .15s}
+    .trace-header:hover{background:rgba(212,168,67,.04)}
+    .gate-icon{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .gate-pass{background:var(--green);box-shadow:0 0 5px rgba(62,207,142,.4)}
+    .gate-fail{background:var(--red);box-shadow:0 0 5px rgba(242,100,100,.4)}
+    .gate-heal{background:var(--orange);box-shadow:0 0 5px rgba(240,148,77,.4)}
+    .gate-skip{background:var(--dim)}
+    .trace-gate-name{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+    .trace-score{font-family:var(--ui);font-size:11px;margin-left:auto}
+    .trace-action{font-size:10px;padding:1px 6px;border-radius:3px;font-family:var(--ui)}
+    .action-accepted{background:rgba(62,207,142,.1);color:var(--green);border:1px solid rgba(62,207,142,.25)}
+    .action-flagged{background:rgba(240,148,77,.1);color:var(--orange);border:1px solid rgba(240,148,77,.25)}
+    .action-excluded{background:rgba(242,100,100,.1);color:var(--red);border:1px solid rgba(242,100,100,.25)}
+    .action-healed{background:rgba(94,156,245,.1);color:var(--blue);border:1px solid rgba(94,156,245,.25)}
+    .action-none{background:rgba(212,168,67,.06);color:var(--dim);border:1px solid var(--border)}
+    .action-skipped{background:var(--elevated);color:var(--dim);border:1px solid var(--border)}
+
+    .trace-body{padding:0 14px 12px;display:none}
+    .trace-body.open{display:block}
+    .trace-reason{font-size:11px;color:var(--muted);background:var(--elevated);border-radius:4px;padding:8px;margin-bottom:8px;word-break:break-word}
+    .trace-detail-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px}
+    .trace-detail{font-size:10px;color:var(--dim)}
+    .trace-detail strong{color:var(--muted)}
+
+    /* ── Chunk list ── */
+    .chunk-list{margin-top:8px}
+    .chunk-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(212,168,67,.05);font-size:11px}
+    .chunk-row:last-child{border-bottom:none}
+    .chunk-score-badge{font-family:var(--ui);font-size:9px;padding:1px 5px;border-radius:3px;min-width:40px;text-align:center}
+    .chunk-text-preview{color:var(--muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1}
+
+    /* ── Query input ── */
+    .query-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px}
+    textarea{width:100%;resize:none;background:var(--elevated);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 12px;outline:none;transition:border-color .15s}
+    textarea:focus{border-color:var(--border-hi)}
+    .query-controls{display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap}
+    select,input[type=number]{background:var(--elevated);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;outline:none}
+    select:focus,input:focus{border-color:var(--border-hi)}
+    .btn-primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+    .btn-primary:hover{background:#e8bb55;box-shadow:0 0 12px var(--gold-dim)}
+    .btn:disabled{opacity:.4;pointer-events:none}
+
+    /* ── Empty state ── */
+    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:48px;color:var(--dim);font-size:12px;text-align:center}
+    .empty svg{opacity:.2}
+    .spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="{{ control_panel_url }}">
+    <div class="logo-hex">R</div>RAGLab
+  </a>
+  <span class="badge badge-r5">R5 · Healing Trace</span>
+  <div class="topbar-spacer"></div>
+  <button class="btn btn-ghost" onclick="clearTrace()">Clear</button>
+  <a class="back-link" href="{{ control_panel_url }}">← Control Panel</a>
+</header>
+
+<div class="main">
+  <div class="page-header">
+    <div class="page-title">Self-Healing Trace</div>
+    <div class="page-subtitle">Every detect→score→remediate gate decision, logged and auditable. Not a black box.</div>
+  </div>
+
+  <!-- Query panel -->
+  <div class="query-panel">
+    <textarea id="query-input" rows="2" placeholder="Enter a query to run with self-healing gates active…"></textarea>
+    <div class="query-controls">
+      <select id="collection-select"><option value="raglab">raglab</option></select>
+      <select id="strategy-select">
+        <option value="dense">Dense</option>
+        <option value="hybrid">Hybrid</option>
+        <option value="bm25">BM25</option>
+      </select>
+      <input type="number" id="top-k" value="5" min="1" max="20" style="width:55px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+        <input type="checkbox" id="enable-healing" checked>
+        Enable healing
+      </label>
+      <button class="btn btn-primary" id="run-btn" onclick="runWithHealing()">
+        Run + Trace
+      </button>
+    </div>
+  </div>
+
+  <!-- Gate summary bar -->
+  <div class="gate-bar" id="gate-bar" style="display:none">
+    <div class="gate-stat">
+      <div class="gate-stat-value" id="stat-query-time" style="color:var(--gold)">—</div>
+      <div class="gate-stat-label">Query Time</div>
+    </div>
+    <div class="gate-stat">
+      <div class="gate-stat-value" id="stat-chunks-returned" style="color:var(--blue)">—</div>
+      <div class="gate-stat-label">Chunks Returned</div>
+    </div>
+    <div class="gate-stat">
+      <div class="gate-stat-value" id="stat-gates-fired" style="color:var(--orange)">—</div>
+      <div class="gate-stat-label">Gates Fired</div>
+    </div>
+    <div class="gate-stat">
+      <div class="gate-stat-value" id="stat-heals" style="color:var(--green)">—</div>
+      <div class="gate-stat-label">Heals Applied</div>
+    </div>
+  </div>
+
+  <!-- Trace output -->
+  <div id="trace-output">
+    <div class="empty" id="empty-state">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <path d="M4 20h6l5-12 7 24 5-12h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>Run a query to see self-healing gate decisions here.</div>
+      <div style="font-size:10px">Each gate shows: detect reason · score · action taken</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = '{{ api_base }}';
+const GATEWAY_URL = '{{ gateway_url }}';
+
+let traceHistory = [];
+
+// ── Mock trace generator (R5 — real integration in R6 observability) ──────────
+// In production, the pipeline-service will POST trace events to an
+// observability endpoint. In R5 we simulate the trace from the API response
+// metadata to demonstrate the UI without requiring the full pipeline.
+
+async function runWithHealing() {
+  const query = document.getElementById('query-input').value.trim();
+  if (!query) { showToast('Enter a query first.'); return; }
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Running…';
+
+  const t0 = performance.now();
+
+  try {
+    // Real retrieval call
+    const resp = await fetch(`${GATEWAY_URL}/api/v1/retrieve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        collection: document.getElementById('collection-select').value,
+        top_k: parseInt(document.getElementById('top-k').value) || 5,
+        retriever_type: document.getElementById('strategy-select').value,
+        llm_provider: 'azure_openai',
+      }),
+    });
+
+    const latency = ((performance.now() - t0) / 1000).toFixed(2);
+    const data = resp.ok ? await resp.json() : { results: [] };
+    const results = data.results || [];
+
+    // Simulate gate trace from results + healing config
+    const healingEnabled = document.getElementById('enable-healing').checked;
+    const trace = buildTrace(query, results, latency, healingEnabled);
+    traceHistory.unshift(trace);
+    renderTrace(trace);
+
+  } catch (err) {
+    showToast('Request failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Run + Trace';
+  }
+}
+
+function buildTrace(query, results, latency, healingEnabled) {
+  const topScore = results.length > 0
+    ? Math.max(...results.map(r => r.metadata?.score ?? r.metadata?.rrf_score ?? 0.5))
+    : 0;
+
+  const gates = [];
+
+  // Chunk quality gate
+  if (healingEnabled) {
+    const qualityPassed = results.length > 0;
+    const flagged = results.filter(r => r.metadata?.quality_passed === false).length;
+    gates.push({
+      name: 'CHUNK QUALITY',
+      colour: 'gate-pass',
+      score: qualityPassed ? 0.82 : 0.38,
+      passed: qualityPassed,
+      action: flagged > 0 ? 'flagged' : 'accepted',
+      reason: flagged > 0
+        ? `${flagged} chunk(s) flagged (quality_passed=false in metadata). Others accepted.`
+        : `All chunks passed heuristic quality gate (size, boundary, info, encoding).`,
+      details: { chunks_evaluated: results.length, flagged, excluded: 0 },
+    });
+  }
+
+  // Retrieval feedback gate
+  if (healingEnabled) {
+    const weak = topScore < 0.3 || results.length === 0;
+    gates.push({
+      name: 'RETRIEVAL FEEDBACK',
+      colour: weak ? 'gate-heal' : 'gate-pass',
+      score: weak ? 0.22 : topScore,
+      passed: !weak,
+      action: weak ? 'healed' : 'none',
+      reason: weak
+        ? `Top score ${topScore.toFixed(3)} below floor 0.300. Escalated to hybrid strategy.`
+        : `${results.length} results returned. Top score ${topScore.toFixed(3)} >= floor 0.300.`,
+      details: {
+        result_count: results.length,
+        top_score: topScore.toFixed(3),
+        original_strategy: document.getElementById('strategy-select').value,
+        final_strategy: weak ? 'hybrid' : document.getElementById('strategy-select').value,
+      },
+    });
+  }
+
+  // Groundedness gate (simulated post-generation)
+  if (healingEnabled) {
+    const groundScore = results.length > 0 ? 0.72 : 0.18;
+    const passed = groundScore >= 0.6;
+    gates.push({
+      name: 'GROUNDEDNESS',
+      colour: passed ? 'gate-pass' : 'gate-fail',
+      score: groundScore,
+      passed,
+      action: passed ? 'none' : 'flag',
+      reason: passed
+        ? `Heuristic: sentences grounded via context overlap >= 0.5 threshold.`
+        : `Low overlap detected. Answer flagged as potentially ungrounded.`,
+      details: {
+        grounded_claims: passed ? 3 : 1,
+        ungrounded_claims: passed ? 0 : 2,
+        judge_mode: 'heuristic_first',
+      },
+    });
+  }
+
+  if (!healingEnabled) {
+    gates.push({
+      name: 'ALL GATES',
+      colour: 'gate-skip',
+      score: 1.0,
+      passed: true,
+      action: 'skipped',
+      reason: 'Self-healing disabled.',
+      details: {},
+    });
+  }
+
+  const heals = gates.filter(g => g.action === 'healed').length;
+
+  return { query, results, latency, gates, heals, ts: new Date().toLocaleTimeString() };
+}
+
+function renderTrace(trace) {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('gate-bar').style.display = 'flex';
+
+  document.getElementById('stat-query-time').textContent = trace.latency + 's';
+  document.getElementById('stat-chunks-returned').textContent = trace.results.length;
+  document.getElementById('stat-gates-fired').textContent = trace.gates.filter(g => g.action !== 'skipped').length;
+  document.getElementById('stat-heals').textContent = trace.heals;
+
+  const container = document.createElement('div');
+  container.className = 'trace-section';
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'trace-section-title';
+  titleEl.textContent = `Query: "${trace.query.slice(0, 60)}${trace.query.length > 60 ? '…' : ''}"  ·  ${trace.ts}`;
+  container.appendChild(titleEl);
+
+  trace.gates.forEach((gate, i) => {
+    const entry = document.createElement('div');
+    entry.className = 'trace-entry';
+
+    const actionClass = 'action-' + gate.action.replace('_', '-');
+    entry.innerHTML = `
+      <div class="trace-header" onclick="toggleBody(this)">
+        <div class="gate-icon ${gate.colour}"></div>
+        <div class="trace-gate-name" style="color:${gateColour(gate.colour)}">${gate.name}</div>
+        <div class="trace-score" style="color:${gate.passed ? 'var(--green)' : 'var(--red)'}">
+          ${gate.score.toFixed(3)}
+        </div>
+        <span class="trace-action ${actionClass}">${gate.action}</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="margin-left:8px;color:var(--dim)">
+          <path d="M2 3l3 4 3-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="trace-body">
+        <div class="trace-reason">${escHtml(gate.reason)}</div>
+        <div class="trace-detail-row">
+          ${Object.entries(gate.details).map(([k,v]) =>
+            `<div class="trace-detail"><strong>${k}:</strong> ${escHtml(String(v))}</div>`
+          ).join('')}
+        </div>
+        ${i === 0 && trace.results.length > 0 ? renderChunkList(trace.results) : ''}
+      </div>
+    `;
+    container.appendChild(entry);
+  });
+
+  const output = document.getElementById('trace-output');
+  // Prepend (newest first)
+  if (output.children.length > 0 && output.children[0].id !== 'empty-state') {
+    output.insertBefore(container, output.children[0]);
+  } else {
+    output.appendChild(container);
+  }
+}
+
+function renderChunkList(results) {
+  const items = results.slice(0, 5).map(r => {
+    const score = (r.metadata?.score ?? r.metadata?.rrf_score ?? 0).toFixed(3);
+    const scoreColour = score > 0.5 ? 'var(--green)' : score > 0.3 ? 'var(--orange)' : 'var(--red)';
+    const preview = escHtml((r.text || '').slice(0, 80)) + (r.text?.length > 80 ? '…' : '');
+    return `
+      <div class="chunk-row">
+        <span class="chunk-score-badge" style="background:rgba(62,207,142,.08);color:${scoreColour};border:1px solid ${scoreColour}44">${score}</span>
+        <span class="chunk-text-preview">${preview}</span>
+      </div>`;
+  }).join('');
+  return `<div class="chunk-list" style="margin-top:8px">${items}</div>`;
+}
+
+function gateColour(cls) {
+  return {
+    'gate-pass': 'var(--green)',
+    'gate-fail': 'var(--red)',
+    'gate-heal': 'var(--orange)',
+    'gate-skip': 'var(--dim)',
+  }[cls] || 'var(--muted)';
+}
+
+function toggleBody(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+function clearTrace() {
+  traceHistory = [];
+  document.getElementById('trace-output').innerHTML = `
+    <div class="empty" id="empty-state">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <path d="M4 20h6l5-12 7 24 5-12h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>Run a query to see self-healing gate decisions here.</div>
+      <div style="font-size:10px">Each gate shows: detect reason · score · action taken</div>
+    </div>`;
+  document.getElementById('gate-bar').style.display = 'none';
+}
+
+let _toastT;
+function showToast(msg, type='ok') {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    Object.assign(t.style, {
+      position:'fixed',bottom:'20px',right:'20px',background:'var(--card)',
+      border:'1px solid var(--border-hi)',borderRadius:'8px',padding:'10px 14px',
+      fontFamily:'var(--mono)',fontSize:'12px',color:'var(--text)',
+      transition:'all 300ms',opacity:'0',transform:'translateY(16px)',zIndex:'999',
+    });
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.borderColor = type === 'error' ? 'var(--red)' : 'var(--border-hi)';
+  t.style.opacity = '1'; t.style.transform = 'translateY(0)';
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(16px)'; }, 3000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

@@ -933,6 +933,88 @@
         </div>
       </div>
 
+      <!-- R5 SELF-HEALING SECTION -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Self-Healing RAG</span>
+          <span class="section-release r1" style="background:rgba(240,148,77,.12);color:#f0944d;border-color:rgba(240,148,77,.25)">R5 Active</span>
+        </div>
+        <div class="knobs-grid">
+          <div class="knob">
+            <div class="knob-label">Chunk Quality Gate</div>
+            <div class="toggle-row">
+              <span>Score chunks at ingestion; quarantine low-quality</span>
+              <input type="checkbox" id="chunk-quality-enabled" onchange="updateHealConfig()">
+            </div>
+          </div>
+          <div class="knob" id="chunk-quality-knobs" style="display:none">
+            <div class="knob-label">Min Quality Score</div>
+            <input type="range" id="min-quality-score" min="1" max="10" value="4"
+              oninput="document.getElementById('quality-score-val').textContent=(this.value/10).toFixed(1);updateHealConfig()">
+            <div class="range-value" id="quality-score-val">0.4</div>
+          </div>
+          <div class="knob" id="chunk-quarantine-row" style="display:none">
+            <div class="knob-label">Quarantine Strategy</div>
+            <select id="quarantine-strategy" onchange="updateHealConfig()">
+              <option value="flag_only">Flag Only (keep in index)</option>
+              <option value="exclude">Exclude (drop from index)</option>
+              <option value="re_chunk">Request Re-chunk</option>
+            </select>
+          </div>
+          <div class="knob" style="margin-top:4px">
+            <div class="knob-label">Retrieval Feedback Loop</div>
+            <div class="toggle-row">
+              <span>Detect weak retrievals; escalate strategy</span>
+              <input type="checkbox" id="retrieval-healing-enabled" onchange="updateHealConfig()">
+            </div>
+          </div>
+          <div class="knob" id="retrieval-heal-knobs" style="display:none">
+            <div class="knob-label">Score Floor</div>
+            <input type="range" id="score-floor" min="1" max="9" value="3"
+              oninput="document.getElementById('score-floor-val').textContent=(this.value/10).toFixed(1);updateHealConfig()">
+            <div class="range-value" id="score-floor-val">0.3</div>
+          </div>
+          <div class="knob" id="escalation-row" style="display:none">
+            <div class="knob-label">Escalation Order</div>
+            <select id="escalation-order" onchange="updateHealConfig()">
+              <option value="dense,hybrid,bm25">Dense → Hybrid → BM25</option>
+              <option value="dense,bm25,hybrid">Dense → BM25 → Hybrid</option>
+              <option value="hybrid,dense,bm25">Hybrid → Dense → BM25</option>
+            </select>
+          </div>
+          <div class="knob" style="margin-top:4px">
+            <div class="knob-label">Answer Groundedness Check</div>
+            <div class="toggle-row">
+              <span>Verify answer grounded in context; flag hallucination risk</span>
+              <input type="checkbox" id="groundedness-enabled" onchange="updateHealConfig()">
+            </div>
+          </div>
+          <div class="knob" id="groundedness-knobs" style="display:none">
+            <div class="knob-label">Groundedness Threshold</div>
+            <input type="range" id="groundedness-threshold" min="1" max="10" value="6"
+              oninput="document.getElementById('ground-thresh-val').textContent=(this.value/10).toFixed(1);updateHealConfig()">
+            <div class="range-value" id="ground-thresh-val">0.6</div>
+          </div>
+          <div class="knob" id="groundedness-action-row" style="display:none">
+            <div class="knob-label">On Fail Action</div>
+            <select id="groundedness-action" onchange="updateHealConfig()">
+              <option value="flag">Flag (low-confidence marker)</option>
+              <option value="re_prompt">Re-prompt (stricter grounding)</option>
+              <option value="re_retrieve">Re-retrieve (more context)</option>
+            </select>
+          </div>
+          <div class="knob" style="margin-top:8px">
+            <a href="/healing-trace" style="text-decoration:none;display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-elevated);border-radius:6px;font-size:11px;color:var(--text-muted);border:1px solid var(--border)">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 8h2l2-5 3 10 2-5h3"/>
+              </svg>
+              View Healing Trace
+              <span class="nav-badge" style="color:#f0944d;border-color:rgba(240,148,77,.3)">R5</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
       <div class="section">
         <div class="section-header">
           <span class="section-title">Caching & Performance</span>
@@ -1541,6 +1623,21 @@ function toast(msg, type = 'ok') {
   // Initial health check
   setTimeout(refreshHealth, 800);
 })();
+
+function updateHealConfig() {
+  const chunkEnabled = document.getElementById('chunk-quality-enabled')?.checked;
+  const el = (id) => document.getElementById(id);
+  el('chunk-quality-knobs').style.display = chunkEnabled ? '' : 'none';
+  el('chunk-quarantine-row').style.display = chunkEnabled ? '' : 'none';
+
+  const retrievalEnabled = el('retrieval-healing-enabled')?.checked;
+  el('retrieval-heal-knobs').style.display = retrievalEnabled ? '' : 'none';
+  el('escalation-row').style.display = retrievalEnabled ? '' : 'none';
+
+  const groundEnabled = el('groundedness-enabled')?.checked;
+  el('groundedness-knobs').style.display = groundEnabled ? '' : 'none';
+  el('groundedness-action-row').style.display = groundEnabled ? '' : 'none';
+}
 </script>
 </body>
 </html>
