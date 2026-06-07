@@ -2,7 +2,7 @@
 
 > A fully configurable RAG Configuration Generator — microservices monorepo.
 
-[![Release](https://img.shields.io/badge/release-R1-6B48C8)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-R5-f0944d)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://python.org)
 [![uv](https://img.shields.io/badge/package%20manager-uv-black)](https://docs.astral.sh/uv/)
 [![Ruff](https://img.shields.io/badge/linter-ruff-orange)](https://docs.astral.sh/ruff/)
@@ -23,15 +23,15 @@ raglab/
 └── services/
     ├── api-gateway/        # Single entry point, health-aware routing
     ├── ingestion/          # Document intake, async queue, idempotency
-    ├── embedding/          # Vector generation (multi-model)
+    ├── embedding/          # Vector generation (multi-model) + Redis cache [R5]
     ├── indexing/           # Qdrant indexing + Postgres metadata
-    ├── retrieval/          # Retriever execution
+    ├── retrieval/          # Retriever execution (7 strategies)
     ├── llm/                # LLM provider abstraction
-    ├── pipeline/           # End-to-end orchestration
+    ├── pipeline/           # End-to-end orchestration + self-healing gates [R5]
     ├── config/             # Pipeline configuration management
-    ├── storage/            # File storage backend
-    ├── ui/                 # Control Panel (Jinja2 + Alpine.js)
-    ├── graph/              # [R4] GraphRAG
+    ├── storage/            # File storage backend (local + S3 + Azure Blob)
+    ├── ui/                 # Control Panel + Graph Explorer + Healing Trace
+    ├── graph/              # GraphRAG — entity extraction, NetworkX, Leiden [R4]
     ├── observability/      # [R6] LLMOps monitoring
     └── auth/               # [R7] Authentication
 ```
@@ -41,22 +41,43 @@ raglab/
 | Release | Theme | Status |
 |---------|-------|--------|
 | **R1** | Full Shell + Core Pipeline | ✅ Done |
-| **R2** | **Advanced Chunking + Cloud Storage** | ✅ Done |
-| **R3** | **Retrieval Power + CI/CD** | ✅ Done |
-| **R4** | GraphRAG | 🔜 Planned |
-| R5 | Caching + Performance | 🔜 Planned |
+| **R2** | Advanced Chunking + Cloud Storage | ✅ Done |
+| **R3** | Retrieval Power + CI/CD | ✅ Done |
+| **R4** | Graph RAG + Advanced Document Types | ✅ Done |
+| **R5** | Self-Healing RAG + Cost Efficiency | ✅ Done |
 | R6 | Observability / LLMOps | 🔜 Next |
-| R7 | Auth + Multi-tenancy | 🔜 Planned |
+| R7 | Auth + Multi-tenancy + GCS + GCP | 🔜 Planned |
 
-## R1 Active Components
+## R5 Active Components
 
 | Layer | Active | Stubbed (Coming Soon) |
 |-------|--------|-----------------------|
-| Chunker | TextChunker | PDF, DOCX, MD, HTML, Excel, TableStitch |
-| Retriever | DenseRetriever | BM25, Hybrid, MMR, Re-ranker, Compression |
+| Chunker | TextChunker, PDFChunker, DOCXChunker, MarkdownChunker, HTMLChunker, ExcelChunker, HybridChunker, PDFImageChunker, TableStitchChunker | — (all 9 active) |
+| Retriever | DenseRetriever, BM25Retriever, HybridRetriever (RRF), MMRRetriever, ReRankerRetriever, CompressionRetriever, GraphRetriever | — (all 7 active) |
 | Vector Store | Qdrant | FAISS, ChromaDB, Pinecone |
 | LLM Provider | Azure OpenAI, OpenAI, Anthropic, Ollama | Vertex |
-| Storage | Local filesystem | S3, Azure Blob, GCS |
+| Storage | Local filesystem, S3, Azure Blob | GCS (R7) |
+| Graph | NetworkX + Leiden community detection, graph-service v0.2.0 | Neo4j (optional R6+) |
+| Eval / Self-Healing | ChunkQualityScorer, RetrievalHealer, GroundednessChecker (raglab-eval v0.1.0) | — |
+| Cache | Redis embedding cache (hit_rate_pct ROI metric) | Semantic cache (R6) |
+| Infrastructure | Azure AKS + AWS EKS (Terraform), HPA, PDB, Redis HA, IRSA | GCP GKE (R7) |
+
+## Release Branches
+
+Each release is a permanent snapshot branch for step-by-step demos and presentations.
+
+| Branch | Tests | What it showcases |
+|--------|-------|-------------------|
+| `release/r1` | 369 | Core pipeline — 13 services, TextChunker, DenseRetriever, Control Panel |
+| `release/r2` | 564 | + 6 chunkers (PDF/DOCX/MD/HTML/Excel/Hybrid), S3 + Azure Blob |
+| `release/r3` | 796 | + BM25, Hybrid RRF, MMR, ReRanker, Compression, Comparison UI, CI/CD |
+| `release/r4` | 1,287 | + Graph RAG, PDFImageChunker, TableStitchChunker, D3.js Explorer, Terraform |
+| `release/r5` | 1,558 | + Self-healing gates, raglab-eval, embedding cache, Healing Trace UI |
+
+```bash
+git checkout release/r1   # demo R1
+git checkout release/r5   # current production state
+```
 
 ## Quick Start
 
