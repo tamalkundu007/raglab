@@ -178,3 +178,52 @@ class TestSecurityAudit:
         for f in self._tfs():
             assert not re.search(r'credentials\s*=\s*"[^"]+\.json"', f.read_text()), \
                 f"SA key path in {f.name}"
+
+
+class TestAzureScaling:
+    def test_scaling_file_exists(self):  assert (INFRA_ROOT/"azure"/"scaling.tf").exists()
+    def test_hpa_defined(self):          assert "horizontal_pod_autoscaler" in (INFRA_ROOT/"azure"/"scaling.tf").read_text()
+    def test_pdb_defined(self):          assert "pod_disruption_budget" in (INFRA_ROOT/"azure"/"scaling.tf").read_text()
+    def test_redis_helm_release(self):   assert "redis" in (INFRA_ROOT/"azure"/"scaling.tf").read_text()
+    def test_embedding_node_pool(self):  assert "embedding" in (INFRA_ROOT/"azure"/"scaling.tf").read_text()
+    def test_node_taint(self):           assert "NoSchedule" in (INFRA_ROOT/"azure"/"scaling.tf").read_text()
+    def test_network_policy(self):       assert "kubernetes_network_policy" in (INFRA_ROOT/"azure"/"scaling.tf").read_text()
+    def test_resource_quota(self):       assert "kubernetes_resource_quota" in (INFRA_ROOT/"azure"/"scaling.tf").read_text()
+    def test_scale_down_stabilisation(self): assert "stabilization_window" in (INFRA_ROOT/"azure"/"scaling.tf").read_text()
+    def test_pdb_min_available_50pct(self):  assert "50%" in (INFRA_ROOT/"azure"/"scaling.tf").read_text()
+
+class TestAWSScaling:
+    def test_scaling_file_exists(self):   assert (INFRA_ROOT/"aws"/"scaling.tf").exists()
+    def test_elasticache_redis(self):     assert "aws_elasticache_replication_group" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_redis_encrypted_at_rest(self):
+        assert "at_rest_encryption_enabled" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+        assert "true" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_redis_transit_encrypted(self):
+        assert "transit_encryption_enabled" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_irsa_embedding(self):        assert "embedding_irsa" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_irsa_pipeline(self):         assert "pipeline_irsa" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_oidc_string_equals(self):    assert "StringEquals" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_s3_docs_bucket(self):        assert "aws_s3_bucket" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_s3_versioning_enabled(self): assert "versioning" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_s3_public_access_blocked(self): assert "block_public_acls" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_redis_secret_in_secrets_manager(self): assert "redis-url" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_cloudwatch_container_insights(self): assert "containerinsights" in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+    def test_no_hardcoded_credentials(self):
+        assert not re.search(r'password\s*=\s*"[^"]{8,}"', (INFRA_ROOT/"aws"/"scaling.tf").read_text(), re.IGNORECASE)
+    def test_outputs_defined(self):
+        assert 'output "redis_primary_endpoint"' in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+        assert 'output "docs_bucket"' in (INFRA_ROOT/"aws"/"scaling.tf").read_text()
+
+class TestSharedVariablesR5:
+    def test_redis_node_type(self):    assert "redis_node_type" in (INFRA_ROOT/"shared"/"variables.tf").read_text()
+    def test_redis_replicas(self):     assert "redis_replicas" in (INFRA_ROOT/"shared"/"variables.tf").read_text()
+    def test_hpa_cpu_threshold(self):  assert "hpa_cpu_threshold" in (INFRA_ROOT/"shared"/"variables.tf").read_text()
+    def test_pdb_min_available(self):  assert "pdb_min_available" in (INFRA_ROOT/"shared"/"variables.tf").read_text()
+
+class TestReadmeR5:
+    def test_r5_section_in_readme(self): assert "R5" in (INFRA_ROOT/"README.md").read_text()
+    def test_hpa_documented(self):       assert "HPA" in (INFRA_ROOT/"README.md").read_text()
+    def test_pdb_documented(self):       assert "PodDisruptionBudget" in (INFRA_ROOT/"README.md").read_text() or "PDB" in (INFRA_ROOT/"README.md").read_text()
+    def test_elasticache_documented(self): assert "ElastiCache" in (INFRA_ROOT/"README.md").read_text()
+    def test_irsa_documented(self):       assert "IRSA" in (INFRA_ROOT/"README.md").read_text()
+    def test_redis_documented(self):      assert "Redis" in (INFRA_ROOT/"README.md").read_text()

@@ -120,3 +120,40 @@ variable "common_tags" {
     Repository  = "tamalkundu007/raglab"
   }
 }
+
+# ── Redis (R5) ────────────────────────────────────────────────────────────────
+
+variable "redis_node_type" {
+  type        = map(string)
+  description = "Redis node type per cloud"
+  default = {
+    azure = "C1"                  # Azure Cache: 1 GB standard
+    aws   = "cache.t4g.medium"    # ElastiCache: 3.1 GB
+  }
+}
+
+variable "redis_replicas" {
+  type        = number
+  description = "Number of Redis replicas (primary + N replicas)"
+  default     = 1
+}
+
+# ── Scaling ───────────────────────────────────────────────────────────────────
+
+variable "hpa_cpu_threshold" {
+  type        = number
+  description = "CPU utilisation % target for HorizontalPodAutoscaler"
+  default     = 65
+}
+
+variable "hpa_max_replicas" {
+  type        = number
+  description = "Maximum pod replicas per service under HPA"
+  default     = 10
+}
+
+variable "pdb_min_available" {
+  type        = string
+  description = "Minimum available pods during voluntary disruptions"
+  default     = "50%"
+}

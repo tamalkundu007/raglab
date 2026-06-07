@@ -162,3 +162,27 @@ GCP infrastructure is defined but disabled. See `gcp/main.tf` for the complete s
 - `GCSStorageBackend`
 - `VertexEmbedder` / `VertexProvider`
 - `.github/workflows/cd-gcp.yml` (add `on:` triggers in R7)
+
+---
+
+## R5 Additions (scaling.tf)
+
+### Azure (`azure/scaling.tf`)
+- **HPA:** `kubernetes_horizontal_pod_autoscaler_v2` for 8 stateless services. CPU threshold 60–70%, memory threshold 75–85%. Scale-up: 100%/60s. Scale-down: stabilisation window 5 min, 1 pod/120s (prevents thrash).
+- **PodDisruptionBudgets:** `min_available=50%` for all customer-facing and processing services. Prevents full drain during AKS node upgrades.
+- **Redis (HA):** Bitnami Helm chart, Sentinel mode, 1 master + 2 replicas, `managed-premium` PVC 8Gi. Used by embedding cache (R5) and semantic cache (R6).
+- **Embedding node pool:** Dedicated `Standard_D4s_v5` pool with `workload=embedding:NoSchedule` taint. Embedding pods use tolerations; other services stay on system pool.
+- **Network Policy:** Default-deny all, allow raglab-internal namespace traffic + port 443 egress for LLM APIs.
+- **Namespace resource quota:** CPU 20/40, memory 40Gi/80Gi, 100 pods max.
+
+### AWS (`aws/scaling.tf`)
+- **ElastiCache Redis:** `cache.t4g.medium`, 2 nodes (primary + replica), Multi-AZ, `at_rest_encryption_enabled=true`, `transit_encryption_enabled=true`. Connection string in Secrets Manager at `raglab/redis-url`.
+- **IRSA (IAM Roles for Service Accounts):**
+  - `raglab-embedding-irsa`: Secrets Manager read for `raglab/*`.
+  - `raglab-pipeline-irsa`: S3 read/write on `raglab-{env}-docs` + Secrets Manager read.
+  - Both use OIDC `StringEquals` conditions — pods only assume their own role.
+- **S3 docs bucket:** versioning enabled, AES256 SSE, all public access blocked.
+- **CloudWatch Container Insights:** log group `/aws/containerinsights/{cluster}/performance`, 14-day retention.
+
+### Shared variables (`shared/variables.tf`)
+Three new variables: `redis_node_type`, `redis_replicas`, `hpa_cpu_threshold`, `hpa_max_replicas`, `pdb_min_available`.
