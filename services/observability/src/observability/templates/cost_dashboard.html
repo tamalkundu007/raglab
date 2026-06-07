@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab — Cost Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <style>
+    :root{--bg:#0a0a0f;--surface:#111118;--card:#1c1c25;--elevated:#18181f;--gold:#d4a843;--gold-dim:rgba(212,168,67,.12);--text:#f0ede8;--muted:#9a9490;--dim:#5a5650;--green:#3ecf8e;--blue:#5e9cf5;--orange:#f0944d;--red:#f26464;--purple:#a78bfa;--teal:#2dd4bf;--border:rgba(212,168,67,.15);--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;--ui:'Space Mono',monospace}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;min-height:100vh}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(212,168,67,.25);border-radius:3px}
+    .topbar{display:flex;align-items:center;gap:14px;padding:0 20px;height:50px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+    .logo{font-family:var(--display);font-size:15px;font-weight:800;color:var(--gold);text-decoration:none;display:flex;align-items:center;gap:8px}
+    .logo-hex{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--bg);font-weight:800}
+    .badge{font-family:var(--ui);font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.08em;text-transform:uppercase;background:rgba(212,168,67,.12);color:var(--gold);border:1px solid rgba(212,168,67,.3)}
+    .topbar-spacer{flex:1}
+    .back-link{font-family:var(--ui);font-size:11px;color:var(--muted);text-decoration:none}
+    .main{padding:24px;max-width:1100px;margin:0 auto}
+    .section{margin-bottom:28px}
+    .section-title{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+    .stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;flex:1;min-width:120px}
+    .stat-val{font-family:var(--display);font-size:24px;font-weight:800;line-height:1;margin-bottom:3px}
+    .stat-label{font-size:9px;font-family:var(--ui);text-transform:uppercase;letter-spacing:.1em;color:var(--dim)}
+    .chart-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+    .chart-title{font-family:var(--ui);font-size:10px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.1em}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{font-family:var(--ui);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);padding:7px 10px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface)}
+    td{padding:8px 10px;border-bottom:1px solid rgba(212,168,67,.05)}
+    .provider-pill{display:inline-block;padding:1px 6px;border-radius:3px;font-family:var(--ui);font-size:9px;background:rgba(94,156,245,.1);color:var(--blue);border:1px solid rgba(94,156,245,.2)}
+    .cache-bar-wrap{background:var(--elevated);border-radius:4px;height:8px;overflow:hidden;margin-top:4px}
+    .cache-bar{height:100%;background:var(--green);border-radius:4px;transition:width .5s}
+    .empty{padding:20px;text-align:center;color:var(--dim);font-size:11px}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="{{ control_panel_url }}"><div class="logo-hex">R</div>RAGLab</a>
+  <span class="badge">R6 · Cost Dashboard</span>
+  <div class="topbar-spacer"></div>
+  <a class="back-link" href="{{ control_panel_url }}">← Control Panel</a>
+</header>
+
+<div class="main">
+
+  <div class="section">
+    <div class="section-title">Token Usage (Last 24h)</div>
+    <div class="stat-row" id="token-stats">
+      <div class="stat"><div class="stat-val">—</div><div class="stat-label">Total Tokens</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Daily Token Trend (7 Days)</div>
+    <div class="chart-card" id="trend-chart"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Cost by Provider</div>
+    <div id="provider-table"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Embedding Cache (Last 24h)</div>
+    <div class="stat-row" id="cache-stats">
+      <div class="stat"><div class="stat-val">—</div><div class="stat-label">Hit Rate</div></div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px" id="cache-bar-panel"></div>
+  </div>
+
+</div>
+
+<script>
+const OBS_API = '{{ obs_api_base }}';
+
+async function loadAll() {
+  await Promise.all([loadTokenStats(), loadTrend(), loadProviders(), loadCache()]);
+}
+
+async function loadTokenStats() {
+  try {
+    const r = await fetch(`${OBS_API}/cost/summary`);
+    if (!r.ok) return;
+    const s = await r.json();
+    document.getElementById('token-stats').innerHTML = `
+      <div class="stat"><div class="stat-val" style="color:var(--text)">${fmt(s.total_tokens)}</div><div class="stat-label">Total Tokens</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--gold)">$${(s.total_cost_usd||0).toFixed(4)}</div><div class="stat-label">Estimated Cost</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--blue)">${fmt(s.total_prompt_tokens)}</div><div class="stat-label">Prompt Tokens</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--purple)">${fmt(s.total_completion_tokens)}</div><div class="stat-label">Completion Tokens</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--muted)">${s.total_requests||0}</div><div class="stat-label">Requests</div></div>
+    `;
+  } catch {}
+}
+
+async function loadTrend() {
+  const el = document.getElementById('trend-chart');
+  try {
+    const r = await fetch(`${OBS_API}/cost/trend`);
+    if (!r.ok) { el.innerHTML = '<div class="empty">No data.</div>'; return; }
+    const data = await r.json();
+    if (!data.length) { el.innerHTML = '<div class="empty">No token data yet. Run some queries to see trends.</div>'; return; }
+    renderTrend(data, el);
+  } catch (e) { el.innerHTML = `<div class="empty">Error: ${escHtml(e.message)}</div>`; }
+}
+
+function renderTrend(data, container) {
+  container.innerHTML = '';
+  const W = container.clientWidth - 32;
+  const H = 160;
+  const M = {top:10,right:10,bottom:30,left:55};
+  const w = W - M.left - M.right;
+  const h = H - M.top - M.bottom;
+
+  const x = d3.scaleBand().domain(data.map(d => d.day)).range([0,w]).padding(0.3);
+  const y = d3.scaleLinear().domain([0, d3.max(data, d => +d.total_tokens)||1]).range([h,0]).nice();
+
+  const svg = d3.select(container).append('svg').attr('width', W).attr('height', H);
+  const g = svg.append('g').attr('transform', `translate(${M.left},${M.top})`);
+
+  // Grid lines
+  g.append('g').attr('class','grid').call(
+    d3.axisLeft(y).ticks(4).tickSize(-w).tickFormat('')
+  ).selectAll('line').attr('stroke','rgba(212,168,67,.07)');
+  g.select('.grid .domain').remove();
+
+  // Bars
+  g.selectAll('rect').data(data).join('rect')
+    .attr('x', d => x(d.day)).attr('y', d => y(+d.total_tokens))
+    .attr('width', x.bandwidth()).attr('height', d => h - y(+d.total_tokens))
+    .attr('fill','var(--gold)').attr('opacity',0.75).attr('rx',3);
+
+  // Cost line overlay
+  const costY = d3.scaleLinear().domain([0, d3.max(data, d => +d.cost_usd)||0.01]).range([h,0]).nice();
+  const line = d3.line().x(d => x(d.day)+x.bandwidth()/2).y(d => costY(+d.cost_usd)).curve(d3.curveMonotoneX);
+  g.append('path').datum(data).attr('fill','none').attr('stroke','var(--orange)')
+    .attr('stroke-width',2).attr('d', line);
+
+  // Axes
+  g.append('g').attr('transform',`translate(0,${h})`).call(d3.axisBottom(x).tickSize(0))
+    .selectAll('text').attr('fill','var(--dim)').attr('font-size',9).attr('font-family','Space Mono');
+  g.append('g').call(d3.axisLeft(y).ticks(4).tickFormat(d => d>=1000?`${d/1000}k`:d))
+    .selectAll('text').attr('fill','var(--dim)').attr('font-size',9);
+  g.selectAll('.domain').attr('stroke','rgba(212,168,67,.2)');
+}
+
+async function loadProviders() {
+  const el = document.getElementById('provider-table');
+  try {
+    const r = await fetch(`${OBS_API}/cost/by-provider`);
+    if (!r.ok || !(await r.clone().json()).length) {
+      el.innerHTML = '<div class="empty">No provider data yet.</div>'; return;
+    }
+    const data = await r.json();
+    el.innerHTML = `<table>
+      <thead><tr><th>Provider</th><th>Tokens</th><th>Cost (USD)</th><th>Requests</th><th>Avg Latency</th></tr></thead>
+      <tbody>${data.map(p => `<tr>
+        <td><span class="provider-pill">${escHtml(p.provider||'—')}</span></td>
+        <td style="color:var(--text)">${fmt(p.total_tokens)}</td>
+        <td style="color:var(--gold)">$${(p.cost_usd||0).toFixed(4)}</td>
+        <td style="color:var(--muted)">${p.request_count||0}</td>
+        <td style="color:var(--dim)">${p.avg_latency_ms||'—'}ms</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch {}
+}
+
+async function loadCache() {
+  try {
+    const r = await fetch(`${OBS_API}/cost/cache`);
+    if (!r.ok) return;
+    const s = await r.json();
+    const hitPct = s.avg_hit_rate_pct || 0;
+    const saved = s.total_hits || 0;
+    document.getElementById('cache-stats').innerHTML = `
+      <div class="stat"><div class="stat-val" style="color:var(--green)">${hitPct}%</div><div class="stat-label">Avg Hit Rate</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--green)">${fmt(saved)}</div><div class="stat-label">Cached Hits</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--muted)">${fmt(s.total_misses||0)}</div><div class="stat-label">Cache Misses</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--blue)">${s.total_embed_requests||0}</div><div class="stat-label">Embed Requests</div></div>
+    `;
+    document.getElementById('cache-bar-panel').innerHTML = `
+      <div style="font-family:var(--ui);font-size:9px;color:var(--dim);margin-bottom:6px">CACHE HIT RATE — ${hitPct}% API calls saved on re-ingestion</div>
+      <div class="cache-bar-wrap">
+        <div class="cache-bar" style="width:${Math.min(hitPct,100)}%"></div>
+      </div>
+      <div style="font-size:10px;color:var(--dim);margin-top:6px">
+        ${hitPct >= 50 ? `<span style="color:var(--green)">✓</span> ROI: ${Math.round(hitPct)}% fewer embedding API calls on re-ingestion` : 'Cache warming — run more ingestion jobs to build up hit rate'}
+      </div>`;
+  } catch {}
+}
+
+function fmt(n) { if (n==null) return '—'; return n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+loadAll();
+setInterval(loadAll, 30000);
+</script>
+</body>
+</html>

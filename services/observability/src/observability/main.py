@@ -24,6 +24,7 @@ from raglab_common.tracing import configure_tracing, make_trace_middleware
 from observability.routers.traces import router as traces_router
 from observability.routers.chunks import router as chunks_router
 from observability.routers.retrieval import router as retrieval_router
+from observability.routers.cost import router as cost_router
 
 log = get_logger(__name__)
 
@@ -78,6 +79,7 @@ app.add_middleware(make_trace_middleware("observability"))
 app.include_router(traces_router)
 app.include_router(chunks_router)
 app.include_router(retrieval_router)
+app.include_router(cost_router)
 
 
 @app.get("/health", response_model=HealthModel)
