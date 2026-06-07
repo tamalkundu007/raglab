@@ -22,6 +22,7 @@ from raglab_common.logging import configure_logging, get_logger
 from raglab_common.models import HealthModel
 from raglab_common.tracing import configure_tracing, make_trace_middleware
 from observability.routers.traces import router as traces_router
+from observability.routers.chunks import router as chunks_router
 
 log = get_logger(__name__)
 
@@ -74,6 +75,7 @@ app = FastAPI(
 
 app.add_middleware(make_trace_middleware("observability"))
 app.include_router(traces_router)
+app.include_router(chunks_router)
 
 
 @app.get("/health", response_model=HealthModel)
@@ -99,5 +101,8 @@ async def root() -> dict:
             "GET /obs/traces/{trace_id}/timeline",
             "GET /obs/services/stats",
             "GET /obs/viewer",
+            "GET /obs/chunks/docs",
+            "GET /obs/chunks/{doc_id}",
+            "GET /obs/inspector",
         ],
     }
