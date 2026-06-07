@@ -24,6 +24,7 @@ from raglab_eval.models import (
 )
 from raglab_eval.chunk_quality import ChunkQualityScorer
 from raglab_eval.retrieval_heal import RetrievalHealer
+from raglab_eval.groundedness import GroundednessChecker
 
 __version__ = "0.1.0"
 
@@ -35,4 +36,5 @@ __all__ = [
     "QuarantineStrategy", "JudgeMode", "GroundednessAction",
     "ChunkQualityScorer",
     "RetrievalHealer",
+    "GroundednessChecker",
 ]
