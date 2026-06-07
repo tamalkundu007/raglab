@@ -15,3 +15,9 @@ class PipelineSettings(BaseServiceSettings):
     embedding_url: str = "http://embedding:8002"
     indexing_url: str = "http://indexing:8003"
     storage_url: str = "http://storage:8008"
+
+    # ── Chunk quality gate (R5) ───────────────────────────────────────────────
+    # Set chunk_quality_config to a dict to activate quality scoring.
+    # Keys match ChunkQualityConfig fields in raglab-eval.
+    # Example: {"enabled": True, "min_quality_score": 0.4, "quarantine_strategy": "flag_only"}
+    chunk_quality_config: dict | None = None  # None = disabled

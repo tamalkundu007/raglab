@@ -25,6 +25,7 @@ from raglab_common.exceptions import RAGLabError
 from raglab_common.logging import get_logger
 from raglab_common.models import ChunkModel, EmbeddingModel
 from raglab_common.queue import IngestionMessage
+from pipeline.quality_gate import apply_quality_gate
 
 log = get_logger(__name__)
 
@@ -62,6 +63,18 @@ async def run_pipeline(message: IngestionMessage, app_state: Any) -> None:
     if not chunks:
         raise PipelineError(f"Chunker produced 0 chunks for doc_id={message.doc_id}.")
     log.info("pipeline.chunked", doc_id=message.doc_id, chunks=len(chunks))
+
+    # Step 2b: Chunk quality gate (R5) — filter/flag low-quality chunks
+    quality_config = getattr(settings, "chunk_quality_config", None) if settings else None
+    chunks, gate_summary = apply_quality_gate(chunks, quality_config)
+    if gate_summary.get("enabled"):
+        log.info("pipeline.quality_gate", doc_id=message.doc_id, **{
+            k: gate_summary[k] for k in ("total", "accepted", "flagged", "excluded")
+        })
+    if not chunks:
+        raise PipelineError(
+            f"All chunks excluded by quality gate for doc_id={message.doc_id}."
+        )
 
     # Step 3: Embed via embedding-service
     embedding_url = getattr(settings, "embedding_url", "http://embedding:8002") if settings else "http://embedding:8002"

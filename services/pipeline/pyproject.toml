@@ -9,6 +9,7 @@ description = "End-to-end RAG pipeline orchestration"
 requires-python = ">=3.12"
 dependencies = [
     "raglab-common",
+    "raglab-eval",
     "raglab-chunkers",
     "raglab-retrievers",
     "fastapi>=0.115",
