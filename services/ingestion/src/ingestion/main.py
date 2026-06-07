@@ -20,6 +20,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from raglab_common.db import close_db, create_tables, init_db, _session_factory
+from raglab_common.tracing import configure_tracing, make_trace_middleware
 from raglab_common.logging import configure_logging, get_logger
 from raglab_common.models import HealthModel
 from ingestion.queue.publisher import RabbitMQPublisher
@@ -58,6 +59,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         log.warning("postgres.unavailable", reason=str(exc))
 
     log.info("service.started", service="ingestion", port=settings.port)
+    # ── Tracing (R6) ──────────────────────────────────────────────────────────
+    configure_tracing(
+        service_name="ingestion",
+        postgres_dsn=getattr(settings, "tracing_postgres_dsn", "") if settings else "",
+        enabled=getattr(settings, "tracing_enabled", True) if settings else True,
+    )
+
     yield
 
     if app.state.publisher:
@@ -74,6 +82,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+app.add_middleware(make_trace_middleware("ingestion"))
 
 app.include_router(ingest_router)
 

@@ -18,6 +18,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
 from raglab_common.logging import configure_logging, get_logger
+from raglab_common.tracing import configure_tracing, make_trace_middleware
 from raglab_common.models import HealthModel
 from ui.routers.pages import router as pages_router
 from ui.settings import UISettings
@@ -31,6 +32,13 @@ log = get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.settings = settings
     log.info("service.started", service="ui", port=settings.port, gateway=settings.gateway_url)
+    # ── Tracing (R6) ──────────────────────────────────────────────────────────
+    configure_tracing(
+        service_name="ui",
+        postgres_dsn=getattr(settings, "tracing_postgres_dsn", "") if settings else "",
+        enabled=getattr(settings, "tracing_enabled", True) if settings else True,
+    )
+
     yield
     log.info("service.shutdown", service="ui")
 
@@ -44,6 +52,8 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+
+app.add_middleware(make_trace_middleware("ui"))
 
 app.include_router(pages_router)
 

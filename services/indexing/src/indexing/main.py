@@ -23,6 +23,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from raglab_common.db import close_db, create_tables, init_db
+from raglab_common.tracing import configure_tracing, make_trace_middleware
 from raglab_common.logging import configure_logging, get_logger
 from raglab_common.models import HealthModel
 from indexing.qdrant_client import QdrantIndexer
@@ -67,6 +68,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         log.warning("postgres.unavailable", reason=str(exc))
 
     log.info("service.started", service="indexing", port=settings.port)
+    # ── Tracing (R6) ──────────────────────────────────────────────────────────
+    configure_tracing(
+        service_name="indexing",
+        postgres_dsn=getattr(settings, "tracing_postgres_dsn", "") if settings else "",
+        enabled=getattr(settings, "tracing_enabled", True) if settings else True,
+    )
+
     yield
 
     await close_db()
@@ -81,6 +89,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+app.add_middleware(make_trace_middleware("indexing"))
 
 app.include_router(index_router)
 

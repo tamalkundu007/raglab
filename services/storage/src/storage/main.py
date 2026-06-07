@@ -22,6 +22,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from raglab_common.logging import configure_logging, get_logger
+from raglab_common.tracing import configure_tracing, make_trace_middleware
 from raglab_common.models import HealthModel
 from storage.factory import StorageFactory
 from storage.routers.storage import router as storage_router
@@ -64,6 +65,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
     except Exception as exc:
         log.warning("storage.backend_init_failed", reason=str(exc))
+    # ── Tracing (R6) ──────────────────────────────────────────────────────────
+    configure_tracing(
+        service_name="storage",
+        postgres_dsn=getattr(settings, "tracing_postgres_dsn", "") if settings else "",
+        enabled=getattr(settings, "tracing_enabled", True) if settings else True,
+    )
+
     yield
     log.info("service.shutdown", service="storage")
 
@@ -76,6 +84,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+app.add_middleware(make_trace_middleware("storage"))
 
 app.include_router(storage_router)
 

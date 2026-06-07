@@ -31,6 +31,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from raglab_common.logging import configure_logging, get_logger
+from raglab_common.tracing import configure_tracing, make_trace_middleware
 from raglab_common.models import HealthModel
 from api_gateway.health_registry import DOWNSTREAM_SERVICES, HealthRegistry
 from api_gateway.routers.gateway import router as gateway_router
@@ -79,6 +80,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     poll_task = asyncio.create_task(registry.run())
     log.info("service.started", service="api-gateway", port=settings.port)
 
+    # ── Tracing (R6) ──────────────────────────────────────────────────────────
+    configure_tracing(
+        service_name="api-gateway",
+        postgres_dsn=getattr(settings, "tracing_postgres_dsn", "") if settings else "",
+        enabled=getattr(settings, "tracing_enabled", True) if settings else True,
+    )
+
     yield
 
     poll_task.cancel()
@@ -97,6 +105,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+app.add_middleware(make_trace_middleware("api-gateway"))
 
 app.include_router(gateway_router)
 

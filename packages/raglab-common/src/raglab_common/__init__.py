@@ -44,3 +44,12 @@ __all__ = [
     "ResponseModel",
     "HealthModel",
 ]
+from raglab_common.tracing import (
+    configure_tracing,
+    get_tracer,
+    traced_span,
+    record_event,
+    trace_headers,
+    current_trace_id,
+    make_trace_middleware,
+)

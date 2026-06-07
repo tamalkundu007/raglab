@@ -17,6 +17,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from raglab_common.logging import configure_logging, get_logger
+from raglab_common.tracing import configure_tracing, make_trace_middleware
 from raglab_common.models import HealthModel
 from retrieval.routers.retrieve import router as retrieve_router
 from retrieval.settings import RetrievalSettings
@@ -39,6 +40,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         log.warning("qdrant.unavailable", reason=str(exc))
     log.info("service.started", service="retrieval", port=settings.port)
+    # ── Tracing (R6) ──────────────────────────────────────────────────────────
+    configure_tracing(
+        service_name="retrieval",
+        postgres_dsn=getattr(settings, "tracing_postgres_dsn", "") if settings else "",
+        enabled=getattr(settings, "tracing_enabled", True) if settings else True,
+    )
+
     yield
     log.info("service.shutdown", service="retrieval")
 
@@ -51,6 +59,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+app.add_middleware(make_trace_middleware("retrieval"))
 
 app.include_router(retrieve_router)
 

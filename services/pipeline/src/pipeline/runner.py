@@ -25,6 +25,7 @@ from raglab_common.exceptions import RAGLabError
 from raglab_common.logging import get_logger
 from raglab_common.models import ChunkModel, EmbeddingModel
 from raglab_common.queue import IngestionMessage
+from raglab_common.tracing import trace_headers, traced_span, get_tracer
 from pipeline.quality_gate import apply_quality_gate
 
 log = get_logger(__name__)
@@ -120,6 +121,7 @@ async def _embed_chunks(
             resp = await client.post(
                 f"{embedding_url}/embed/batch",
                 json={"texts": texts, "provider": llm_provider},
+                headers=trace_headers(),
             )
             resp.raise_for_status()
             data = resp.json()
@@ -166,7 +168,7 @@ async def _index_chunks(
     }
     async with httpx.AsyncClient(timeout=120.0) as client:
         try:
-            resp = await client.post(f"{indexing_url}/index", json=payload)
+            resp = await client.post(f"{indexing_url}/index", json=payload, headers=trace_headers())
             resp.raise_for_status()
         except Exception as exc:
             raise PipelineError(f"Indexing-service call failed: {exc}") from exc

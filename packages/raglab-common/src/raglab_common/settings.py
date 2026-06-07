@@ -75,3 +75,8 @@ class BaseServiceSettings(BaseSettings):
     openai_api_key: str = Field(default="", repr=False)
     anthropic_api_key: str = Field(default="", repr=False)
     ollama_base_url: str = "http://localhost:11434"
+
+    # ── Observability / Tracing (R6) ──────────────────────────────────────────
+    tracing_enabled: bool = True
+    tracing_postgres_dsn: str = ""          # writes spans to raglab_events
+    tracing_otlp_endpoint: str = ""         # optional OTLP gRPC endpoint

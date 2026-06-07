@@ -22,6 +22,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from raglab_common.db import close_db, create_tables, init_db
+from raglab_common.tracing import configure_tracing, make_trace_middleware
 from raglab_common.logging import configure_logging, get_logger
 from raglab_common.models import HealthModel
 from pipeline.queue.consumer import RabbitMQConsumer
@@ -71,6 +72,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     consumer_task = asyncio.create_task(_run_consumer())
     log.info("service.started", service="pipeline", port=settings.port)
 
+    # ── Tracing (R6) ──────────────────────────────────────────────────────────
+    configure_tracing(
+        service_name="pipeline",
+        postgres_dsn=getattr(settings, "tracing_postgres_dsn", "") if settings else "",
+        enabled=getattr(settings, "tracing_enabled", True) if settings else True,
+    )
+
     yield
 
     consumer_task.cancel()
@@ -91,6 +99,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+app.add_middleware(make_trace_middleware("pipeline"))
 
 app.include_router(pipeline_router)
 

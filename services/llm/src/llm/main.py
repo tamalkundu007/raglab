@@ -18,6 +18,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from raglab_common.logging import configure_logging, get_logger
+from raglab_common.tracing import configure_tracing, make_trace_middleware
 from raglab_common.models import HealthModel, LLMProvider
 from llm.providers import get_llm_provider
 from llm.routers.generate import router as generate_router
@@ -48,6 +49,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             log.warning("llm.provider_skipped", provider=provider.value, reason=str(exc))
     log.info("service.started", service="llm", port=settings.port,
              loaded=list(app.state.providers.keys()))
+    # ── Tracing (R6) ──────────────────────────────────────────────────────────
+    configure_tracing(
+        service_name="llm",
+        postgres_dsn=getattr(settings, "tracing_postgres_dsn", "") if settings else "",
+        enabled=getattr(settings, "tracing_enabled", True) if settings else True,
+    )
+
     yield
     log.info("service.shutdown", service="llm")
 
@@ -60,6 +68,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+app.add_middleware(make_trace_middleware("llm"))
 
 app.include_router(generate_router)
 
