@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab R5 — Release Notes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0a0a0f;--surface:#111118;--card:#1c1c25;--elevated:#18181f;
+      --gold:#d4a843;--gold-dim:rgba(212,168,67,.12);
+      --text:#f0ede8;--muted:#9a9490;--dim:#5a5650;
+      --green:#3ecf8e;--blue:#5e9cf5;--orange:#f0944d;
+      --red:#f26464;--purple:#a78bfa;--teal:#2dd4bf;
+      --border:rgba(212,168,67,.15);--border-hi:rgba(212,168,67,.45);
+      --mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--ui:'Space Mono',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(212,168,67,.3);border-radius:3px}
+
+    .hero{background:linear-gradient(135deg,#0a0a0f 0%,#0a0f0a 60%,#0f0a0a 100%);border-bottom:1px solid var(--border);padding:64px 48px 48px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(240,148,77,.07) 0%,transparent 55%),radial-gradient(ellipse at 20% 80%,rgba(62,207,142,.05) 0%,transparent 45%);pointer-events:none}
+    .hero-eyebrow{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--orange);margin-bottom:16px}
+    .hero-title{font-family:var(--display);font-size:clamp(36px,5vw,64px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:16px}
+    .hero-title span{color:var(--orange)}
+    .hero-sub{font-size:15px;color:var(--muted);max-width:620px;margin-bottom:32px}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:20px;font-family:var(--ui);font-size:11px;color:var(--dim)}
+    .hero-meta strong{color:var(--muted)}
+
+    .stats-bar{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+    .stat{flex:1;min-width:130px;padding:20px 24px;border-right:1px solid var(--border)}
+    .stat:last-child{border-right:none}
+    .stat-value{font-family:var(--display);font-size:28px;font-weight:800;color:var(--orange);line-height:1;margin-bottom:4px}
+    .stat-label{font-size:9px;color:var(--dim);font-family:var(--ui);text-transform:uppercase;letter-spacing:.1em}
+
+    .container{max-width:1080px;margin:0 auto;padding:0 48px 80px}
+    .section{padding:48px 0;border-bottom:1px solid var(--border)}
+    .section:last-child{border-bottom:none}
+    .section-label{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--orange);margin-bottom:10px}
+    .section-title{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+    .section-lead{font-size:13px;color:var(--muted);margin-bottom:28px;max-width:640px}
+
+    table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px}
+    th{font-family:var(--ui);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface)}
+    td{padding:9px 12px;border-bottom:1px solid rgba(212,168,67,.05);vertical-align:top}
+    tr:last-child td{border-bottom:none}
+
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:20px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;transition:border-color .15s}
+    .card:hover{border-color:var(--border-hi)}
+    .card-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .card-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .card-name{font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em}
+    .card-desc{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px}
+    .tag-row{display:flex;flex-wrap:wrap;gap:4px}
+    .tag{font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(212,168,67,.06);color:var(--dim);border:1px solid var(--border);font-family:var(--ui)}
+
+    /* Heal pipeline */
+    .heal-flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin:20px 0}
+    .hf-step{text-align:center;flex:1;min-width:90px}
+    .hf-icon{width:42px;height:42px;border-radius:8px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+    .hf-icon.detect{background:rgba(242,100,100,.1);border:1px solid rgba(242,100,100,.3)}
+    .hf-icon.score{background:rgba(240,148,77,.1);border:1px solid rgba(240,148,77,.3)}
+    .hf-icon.act{background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.3)}
+    .hf-icon.log{background:rgba(94,156,245,.1);border:1px solid rgba(94,156,245,.3)}
+    .hf-name{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .hf-arrow{font-size:14px;color:var(--orange);padding:0 6px;flex-shrink:0}
+
+    .gate-row{display:flex;align-items:flex-start;gap:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:10px}
+    .gate-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:3px}
+    .gate-body .gate-name{font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em;margin-bottom:4px}
+    .gate-body .gate-desc{font-size:11px;color:var(--muted);line-height:1.7}
+
+    .interview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+    .interview-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:10px;padding:16px}
+    .interview-q{font-weight:600;font-size:12px;margin-bottom:8px}
+    .interview-a{font-size:11px;color:var(--muted);line-height:1.7}
+
+    .roadmap{display:flex;flex-direction:column;gap:0}
+    .r-row{display:grid;grid-template-columns:100px 1fr;padding:14px 0;border-bottom:1px solid rgba(212,168,67,.06);align-items:start}
+    .r-tag{font-family:var(--ui);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:2px}
+    .done{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border-hi)}
+    .next{background:rgba(240,148,77,.1);color:var(--orange);border:1px solid rgba(240,148,77,.3)}
+    .later{background:rgba(90,86,80,.1);color:var(--dim);border:1px solid var(--border)}
+    .r-content{padding-left:16px}
+    .r-name{font-weight:600;margin-bottom:2px}
+    .r-desc{font-size:11px;color:var(--muted)}
+
+    .footer{background:var(--surface);border-top:1px solid var(--border);padding:28px 48px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--dim);font-family:var(--ui)}
+    .footer a{color:var(--gold);text-decoration:none}
+
+    @media(max-width:640px){.hero,.container,.footer{padding-left:20px;padding-right:20px}.stats-bar{flex-direction:column}.stat{border-right:none;border-bottom:1px solid var(--border)}}
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Release Notes · June 2026</div>
+  <h1 class="hero-title">RAGLab <span>R5</span></h1>
+  <p class="hero-sub">Self-Healing RAG + Cost Efficiency. Three feedback loops — chunk quality, retrieval feedback, groundedness — each a logged, toggleable detect→score→remediate gate. Not a black box.</p>
+  <div class="hero-meta">
+    <div><strong>raglab-eval</strong> v0.1.0 (new)</div>
+    <div><strong>raglab-chunkers</strong> v0.5.0</div>
+    <div><strong>raglab-retrievers</strong> v0.5.0</div>
+    <div><strong>New tests</strong> 271</div>
+    <div><strong>Total passing</strong> 1,558</div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Black Boxes</div></div>
+  <div class="stat"><div class="stat-value">3</div><div class="stat-label">Heal Gates</div></div>
+  <div class="stat"><div class="stat-value">271</div><div class="stat-label">New Tests</div></div>
+  <div class="stat"><div class="stat-value">1,558</div><div class="stat-label">Total Passing</div></div>
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Infra for Tests</div></div>
+  <div class="stat"><div class="stat-value">2</div><div class="stat-label">Cloud Redis</div></div>
+</div>
+
+<div class="container">
+
+<!-- Heal flow -->
+<div class="section">
+  <div class="section-label">Architecture</div>
+  <div class="section-title">Detect → Score → Remediate</div>
+  <div class="section-lead">Every gate follows the same four-step pattern. Observable, logged, toggleable.</div>
+  <div class="heal-flow">
+    <div class="hf-step"><div class="hf-icon detect">🔍</div><div class="hf-name">Detect</div></div>
+    <div class="hf-arrow">→</div>
+    <div class="hf-step"><div class="hf-icon score">📊</div><div class="hf-name">Score</div></div>
+    <div class="hf-arrow">→</div>
+    <div class="hf-step"><div class="hf-icon act">🔧</div><div class="hf-name">Remediate</div></div>
+    <div class="hf-arrow">→</div>
+    <div class="hf-step"><div class="hf-icon log">📋</div><div class="hf-name">Log + Trace</div></div>
+  </div>
+
+  <!-- Three gates -->
+  <div class="gate-row">
+    <div class="gate-dot" style="background:var(--blue)"></div>
+    <div class="gate-body">
+      <div class="gate-name" style="color:var(--blue)">CHUNK QUALITY GATE</div>
+      <div class="gate-desc">Ingestion-time. Four heuristic subscores: size, boundary integrity, information density (boilerplate + repetition), encoding health. Optional LLM judge in inconclusive band. Quarantine: exclude / flag / re-chunk.</div>
+    </div>
+  </div>
+  <div class="gate-row">
+    <div class="gate-dot" style="background:var(--orange)"></div>
+    <div class="gate-body">
+      <div class="gate-name" style="color:var(--orange)">RETRIEVAL FEEDBACK LOOP</div>
+      <div class="gate-desc">Query-time. Detects weak results (too few, top_score &lt; floor). Escalates through configurable strategy order (Dense → Hybrid → BM25). Bounded retries. Best result tracked across all attempts.</div>
+    </div>
+  </div>
+  <div class="gate-row">
+    <div class="gate-dot" style="background:var(--green)"></div>
+    <div class="gate-body">
+      <div class="gate-name" style="color:var(--green)">ANSWER GROUNDEDNESS CHECK</div>
+      <div class="gate-desc">Post-generation. Sentence-level word overlap against context. LLM judge in inconclusive band. On fail: re-prompt with stricter grounding, re-retrieve more context, or flag low confidence.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Components -->
+<div class="section">
+  <div class="section-label">New Components</div>
+  <div class="section-title">What R5 Ships</div>
+  <div class="card-grid">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--green)"></div>
+        <div class="card-name" style="color:var(--green)">EmbeddingCache (Redis)</div>
+      </div>
+      <div class="card-desc">SHA-256 keyed (provider:model:text). Cache-aware batch endpoint: only uncached texts hit the provider. hit_rate_pct = the ROI metric for re-ingestion cost.</div>
+      <div class="tag-row">
+        <span class="tag">GET /embed/cache/stats</span>
+        <span class="tag">hit_rate_pct</span>
+        <span class="tag">graceful degradation</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--orange)"></div>
+        <div class="card-name" style="color:var(--orange)">raglab-eval v0.1.0</div>
+      </div>
+      <div class="card-desc">New internal package. ChunkQualityScorer, RetrievalHealer, GroundednessChecker. Same pattern as chunkers/retrievers — independently testable, reusable in R6.</div>
+      <div class="tag-row">
+        <span class="tag">HEURISTIC_FIRST</span>
+        <span class="tag">llm_caller injectable</span>
+        <span class="tag">zero infra</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--blue)"></div>
+        <div class="card-name" style="color:var(--blue)">Quality Gate (pipeline)</div>
+      </div>
+      <div class="card-desc">apply_quality_gate() between chunking and embedding. Injects quality metadata into accepted chunks. All-excluded → PipelineError (explicit failure over silent empty index).</div>
+      <div class="tag-row">
+        <span class="tag">exclude / flag / re_chunk</span>
+        <span class="tag">toggleable</span>
+        <span class="tag">metadata injected</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--purple)"></div>
+        <div class="card-name" style="color:var(--purple)">Healing Trace UI</div>
+      </div>
+      <div class="card-desc">GET /healing-trace. Runs a query, shows per-gate detect→score→remediate decisions. Expandable panels with reason + structured details. Summary bar with heals-applied count.</div>
+      <div class="tag-row">
+        <span class="tag">D3-style gate icons</span>
+        <span class="tag">auditable</span>
+        <span class="tag">not a black box</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot" style="background:var(--teal)"></div>
+        <div class="card-name" style="color:var(--teal)">Terraform: Redis + Scaling</div>
+      </div>
+      <div class="card-desc">Azure: HPA, PDB, Redis HA (Sentinel), embedding node pool (taint), NetworkPolicy. AWS: ElastiCache Redis (encrypted), IRSA for embedding + pipeline, S3 docs bucket.</div>
+      <div class="tag-row">
+        <span class="tag">HPA 8 services</span>
+        <span class="tag">IRSA no static keys</span>
+        <span class="tag">Redis multi-AZ</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Cost story -->
+<div class="section">
+  <div class="section-label">Cost Efficiency</div>
+  <div class="section-title">The ROI Story</div>
+  <table>
+    <thead><tr><th>Scenario</th><th>Without R5</th><th>With R5</th></tr></thead>
+    <tbody>
+      <tr><td>Re-ingest 10K chunks (80% unchanged)</td><td style="color:var(--muted)">10,000 embedding API calls</td><td style="color:var(--green)">2,000 calls (80% cache hit)</td></tr>
+      <tr><td>Index corrupt OCR page</td><td style="color:var(--muted)">Garbage embedded in vector store</td><td style="color:var(--green)">Excluded by quality gate</td></tr>
+      <tr><td>Dense retrieval returns 1 weak result</td><td style="color:var(--muted)">LLM hallucinates from thin context</td><td style="color:var(--green)">Escalated to Hybrid, 5 good results</td></tr>
+      <tr><td>LLM answers beyond context</td><td style="color:var(--muted)">Confident wrong answer returned</td><td style="color:var(--green)">Flagged low-confidence or re-prompted</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Interview angles -->
+<div class="section">
+  <div class="section-label">Interview Angles</div>
+  <div class="section-title">What R5 Unlocks</div>
+  <div class="interview-grid">
+    <div class="interview-card">
+      <div class="interview-q">"How do you stop confident hallucinations?"</div>
+      <div class="interview-a">Groundedness gate post-generation. Per-sentence word overlap against retrieved context. On fail: re-prompt, re-retrieve, or flag — never emit a confident wrong answer. Failing loudly beats failing silently.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"How do you detect bad chunks?"</div>
+      <div class="interview-a">Four heuristic subscores at ingestion: size, boundary integrity, information density (boilerplate + bigram repetition), encoding health (U+FFFD, alpha ratio). LLM judge only for the ambiguous middle band.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Self-healing without a black box?"</div>
+      <div class="interview-a">Every gate is an explicit detect→score→remediate decision with a typed result object, a logged reason, and a config toggle. The Healing Trace page shows the full audit trail per query. Not magic.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Embedding cost control?"</div>
+      <div class="interview-a">SHA-256 keyed Redis cache, scoped by provider + model + text. hit_rate_pct on /embed/cache/stats is the ROI metric. Re-ingest a corpus where 80% of chunks are unchanged: 80% fewer API calls.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"LLM-as-judge tradeoffs?"</div>
+      <div class="interview-a">Cheap dedicated model (gpt-4o-mini), separate from generation model. HEURISTIC_FIRST avoids LLM calls for clear pass/fail. Known limits: ~0.7–0.85 correlation with human judges; heuristics are faster and cheaper for obvious cases.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Retrieval strategy selection?"</div>
+      <div class="interview-a">RetrievalHealer escalates through a configurable order (Dense → Hybrid → BM25) when initial results are weak. Best result tracked across all attempts. Retriever errors on one strategy don't crash — continue to next.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Roadmap -->
+<div class="section">
+  <div class="section-label">Roadmap</div>
+  <div class="section-title">7-Release Plan</div>
+  <div class="roadmap">
+    <div class="r-row"><span class="r-tag done">R1 ✓</span><div class="r-content"><div class="r-name">Full Shell + Core Pipeline</div><div class="r-desc">13 services, TextChunker, DenseRetriever, async ingestion. 369 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R2 ✓</span><div class="r-content"><div class="r-name">Advanced Chunking + Cloud Storage</div><div class="r-desc">6 chunkers, S3 + Azure Blob. 564 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R3 ✓</span><div class="r-content"><div class="r-name">Retrieval Power + CI/CD</div><div class="r-desc">BM25, Hybrid, MMR, ReRanker, Compression. GitHub Actions. 796 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R4 ✓</span><div class="r-content"><div class="r-name">Graph RAG + Advanced Document Types</div><div class="r-desc">PDFImageChunker, TableStitchChunker, graph-service, GraphRetriever, D3.js Explorer, Terraform. 1,287 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R5 ✓</span><div class="r-content"><div class="r-name">Self-Healing RAG + Cost Efficiency</div><div class="r-desc">Embedding cache, raglab-eval, 3 heal gates, Healing Trace UI, Terraform Redis + HPA + IRSA. 1,558 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag next">R6</span><div class="r-content"><div class="r-name">Observability / LLMOps</div><div class="r-desc">Faithfulness + relevance + context recall. LangSmith / Phoenix tracing. Answer quality dashboard. Semantic cache.</div></div></div>
+    <div class="r-row"><span class="r-tag later">R7</span><div class="r-content"><div class="r-name">Auth + Multi-tenancy + GCS + GCP</div><div class="r-desc">JWT auth, per-tenant isolation, RBAC, GCS backend, auth-service, Terraform GCP activation.</div></div></div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <div>RAGLab R5 · Built by <a href="https://tamalkundu.com">Tamal Kundu</a> · June 2026</div>
+  <div><a href="https://github.com/tamalkundu007/raglab">GitHub</a> · Python 3.12 · FastAPI · Redis · raglab-eval · Terraform · GitHub Actions</div>
+</div>
+
+</body>
+</html>

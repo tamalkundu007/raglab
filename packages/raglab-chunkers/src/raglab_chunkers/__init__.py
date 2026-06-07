@@ -20,7 +20,7 @@ from raglab_chunkers.table_stitch_chunker import TableStitchChunker
 from raglab_chunkers.caption_service import CaptionService
 from raglab_chunkers._boundary import split_into_windows, count_tokens, backtrack_to_boundary
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = [
     "BaseChunker", "ChunkerFactory",

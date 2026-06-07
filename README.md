@@ -45,7 +45,7 @@ raglab/
 | **R3** | **Retrieval Power + CI/CD** | ✅ Done |
 | **R4** | GraphRAG | 🔜 Planned |
 | R5 | Caching + Performance | 🔜 Planned |
-| R6 | Observability / LLMOps | 🔜 Planned |
+| R6 | Observability / LLMOps | 🔜 Next |
 | R7 | Auth + Multi-tenancy | 🔜 Planned |
 
 ## R1 Active Components
