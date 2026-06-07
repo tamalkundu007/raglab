@@ -26,6 +26,7 @@ def _ctx(request: Request) -> dict:
         "graph_url": "/graph",
         "graph_service_url": getattr(settings, "graph_service_url", "http://graph:8010"),
         "healing_trace_url": "/healing-trace",
+        "obs_viewer_url": "/obs/viewer",
     }
 
 

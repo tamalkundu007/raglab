@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab — Trace Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <style>
+    :root {
+      --bg:#0a0a0f; --surface:#111118; --card:#1c1c25; --elevated:#18181f;
+      --gold:#d4a843; --gold-dim:rgba(212,168,67,.12);
+      --text:#f0ede8; --muted:#9a9490; --dim:#5a5650;
+      --green:#3ecf8e; --blue:#5e9cf5; --orange:#f0944d;
+      --red:#f26464; --purple:#a78bfa; --teal:#2dd4bf;
+      --border:rgba(212,168,67,.15); --border-hi:rgba(212,168,67,.45);
+      --mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif; --ui:'Space Mono',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;overflow:hidden;height:100vh}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(212,168,67,.25);border-radius:3px}
+
+    /* ── Topbar ── */
+    .topbar{display:flex;align-items:center;gap:14px;padding:0 20px;height:50px;background:var(--surface);border-bottom:1px solid var(--border);position:fixed;top:0;left:0;right:0;z-index:100}
+    .logo{font-family:var(--display);font-size:15px;font-weight:800;color:var(--gold);text-decoration:none;display:flex;align-items:center;gap:8px}
+    .logo-hex{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--bg);font-weight:800}
+    .badge{font-family:var(--ui);font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.08em;text-transform:uppercase;background:rgba(94,156,245,.12);color:var(--blue);border:1px solid rgba(94,156,245,.3)}
+    .topbar-spacer{flex:1}
+    .back-link{font-family:var(--ui);font-size:11px;color:var(--muted);text-decoration:none}
+    .back-link:hover{color:var(--gold)}
+    .btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:5px;font-family:var(--ui);font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--elevated);color:var(--muted);transition:all .15s}
+    .btn:hover{color:var(--text);border-color:var(--border-hi)}
+    .btn-primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+    .btn-primary:hover{background:#e8bb55}
+
+    /* ── Layout ── */
+    .layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 50px);margin-top:50px}
+
+    /* ── Left: trace list ── */
+    .trace-list-panel{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+    .panel-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .panel-title{font-family:var(--ui);font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)}
+    .filter-row{padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+    select,input[type=text]{background:var(--elevated);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 7px;outline:none;width:100%}
+    select:focus,input:focus{border-color:var(--border-hi)}
+
+    .trace-item{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,.05);cursor:pointer;transition:background .12s}
+    .trace-item:hover{background:rgba(212,168,67,.04)}
+    .trace-item.active{background:var(--gold-dim);border-left:3px solid var(--gold)}
+    .trace-id{font-family:var(--ui);font-size:9px;color:var(--muted);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .trace-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;gap:4px}
+    .trace-badge{font-size:9px;padding:1px 5px;border-radius:3px;font-family:var(--ui);font-weight:700}
+    .badge-ok{background:rgba(62,207,142,.1);color:var(--green);border:1px solid rgba(62,207,142,.25)}
+    .badge-error{background:rgba(242,100,100,.1);color:var(--red);border:1px solid rgba(242,100,100,.25)}
+    .trace-duration{font-size:10px;color:var(--muted);margin-left:auto}
+    .trace-services{font-size:9px;color:var(--dim);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .empty-list{padding:24px;text-align:center;color:var(--dim);font-size:11px}
+
+    /* ── Right: waterfall ── */
+    .waterfall-panel{overflow:hidden;display:flex;flex-direction:column;background:var(--bg)}
+    .waterfall-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--surface)}
+    .waterfall-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:var(--dim);font-size:12px;gap:12px}
+    .waterfall-empty svg{opacity:.2}
+    #waterfall-svg-wrap{flex:1;overflow:auto}
+
+    /* ── Waterfall SVG ── */
+    .wf-row-bg{fill:transparent}
+    .wf-row-bg:hover{fill:rgba(212,168,67,.04)}
+    .wf-span-bar{rx:3;ry:3}
+    .wf-span-label{font-family:'JetBrains Mono',monospace;font-size:10px;fill:#9a9490;pointer-events:none}
+    .wf-service-label{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+    .wf-op-label{font-family:'JetBrains Mono',monospace;font-size:11px}
+    .wf-tick-line{stroke:rgba(212,168,67,.1);stroke-width:1}
+    .wf-tick-label{font-family:'Space Mono',monospace;font-size:9px;fill:#5a5650}
+    .wf-header-line{stroke:rgba(212,168,67,.2);stroke-width:1}
+
+    /* ── Span detail panel ── */
+    .span-detail{position:absolute;right:0;top:50px;bottom:0;width:280px;background:var(--surface);border-left:1px solid var(--border);padding:14px;overflow-y:auto;transform:translateX(100%);transition:transform .2s;z-index:20}
+    .span-detail.open{transform:translateX(0)}
+    .detail-close{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1}
+    .detail-section{margin-bottom:14px}
+    .detail-label{font-family:var(--ui);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:4px}
+    .detail-value{font-size:11px;color:var(--text);word-break:break-all}
+    .attr-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(212,168,67,.05);font-size:10px}
+    .attr-key{color:var(--muted)}
+    .attr-val{color:var(--text);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* ── Spinner ── */
+    .spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="{{ control_panel_url }}">
+    <div class="logo-hex">R</div>RAGLab
+  </a>
+  <span class="badge">R6 · Trace Viewer</span>
+  <div class="topbar-spacer"></div>
+  <button class="btn" id="refresh-btn" onclick="loadTraces()">↻ Refresh</button>
+  <a class="back-link" href="{{ control_panel_url }}">← Control Panel</a>
+</header>
+
+<div class="layout">
+
+  <!-- Left: trace list -->
+  <div class="trace-list-panel">
+    <div class="panel-header">
+      <span class="panel-title">Recent Traces</span>
+      <span id="trace-count" style="font-family:var(--ui);font-size:10px;color:var(--dim)"></span>
+    </div>
+    <div class="filter-row">
+      <select id="service-filter" onchange="loadTraces()" style="margin-bottom:5px">
+        <option value="">All services</option>
+        <option value="api-gateway">api-gateway</option>
+        <option value="pipeline">pipeline</option>
+        <option value="retrieval">retrieval</option>
+        <option value="embedding">embedding</option>
+        <option value="llm">llm</option>
+        <option value="graph">graph</option>
+      </select>
+      <select id="status-filter" onchange="loadTraces()">
+        <option value="">All statuses</option>
+        <option value="ok">OK</option>
+        <option value="error">Error</option>
+      </select>
+    </div>
+    <div id="trace-list"><div class="empty-list">Loading traces…</div></div>
+  </div>
+
+  <!-- Right: waterfall -->
+  <div class="waterfall-panel" id="waterfall-panel">
+    <div class="waterfall-header" id="waterfall-header" style="display:none">
+      <div>
+        <div style="font-family:var(--ui);font-size:9px;color:var(--dim);margin-bottom:2px">TRACE ID</div>
+        <div id="wf-trace-id" style="font-family:var(--ui);font-size:11px;color:var(--muted)"></div>
+      </div>
+      <div id="wf-stats" style="display:flex;gap:16px;margin-left:auto;font-size:11px;color:var(--muted)"></div>
+    </div>
+    <div class="waterfall-empty" id="waterfall-empty">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <rect x="4" y="12" width="40" height="3" rx="1.5" fill="currentColor" opacity=".3"/>
+        <rect x="4" y="22" width="28" height="3" rx="1.5" fill="currentColor" opacity=".2"/>
+        <rect x="4" y="32" width="34" height="3" rx="1.5" fill="currentColor" opacity=".15"/>
+      </svg>
+      <div>Select a trace to see the waterfall timeline.</div>
+    </div>
+    <div id="waterfall-svg-wrap"></div>
+  </div>
+
+</div>
+
+<!-- Span detail panel -->
+<div class="span-detail" id="span-detail">
+  <button class="detail-close" onclick="closeDetail()">✕</button>
+  <div id="span-detail-content"></div>
+</div>
+
+<script>
+const OBS_API = '{{ obs_api_base }}';
+
+const SERVICE_COLOURS = {
+  'api-gateway': '#d4a843',
+  'pipeline':    '#f0944d',
+  'retrieval':   '#5e9cf5',
+  'embedding':   '#3ecf8e',
+  'llm':         '#a78bfa',
+  'indexing':    '#2dd4bf',
+  'graph':       '#fb923c',
+  'ingestion':   '#94a3b8',
+  'storage':     '#64748b',
+  'ui':          '#f472b6',
+};
+
+function serviceColour(name) {
+  return SERVICE_COLOURS[name] || '#9a9490';
+}
+
+// ── Load trace list ────────────────────────────────────────────────────────────
+
+async function loadTraces() {
+  const btn = document.getElementById('refresh-btn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+
+  const service = document.getElementById('service-filter').value;
+  const status  = document.getElementById('status-filter').value;
+  let url = `${OBS_API}/traces?limit=50`;
+  if (service) url += `&service=${service}`;
+  if (status)  url += `&status=${status}`;
+
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const traces = await r.json();
+    renderTraceList(traces);
+  } catch (err) {
+    document.getElementById('trace-list').innerHTML =
+      `<div class="empty-list" style="color:var(--red)">Failed: ${escHtml(err.message)}</div>`;
+  } finally {
+    btn.innerHTML = '↻ Refresh';
+    btn.disabled = false;
+  }
+}
+
+function renderTraceList(traces) {
+  document.getElementById('trace-count').textContent = `${traces.length}`;
+  const el = document.getElementById('trace-list');
+
+  if (!traces.length) {
+    el.innerHTML = '<div class="empty-list">No traces found. Run a query to generate trace data.</div>';
+    return;
+  }
+
+  el.innerHTML = traces.map(t => {
+    const dur = t.total_duration_ms != null ? `${t.total_duration_ms}ms` : '—';
+    const services = Array.isArray(t.services) ? t.services.join(', ') : (t.services || '');
+    const badgeClass = t.has_error ? 'badge-error' : 'badge-ok';
+    const badgeText  = t.has_error ? 'ERROR' : 'OK';
+    const shortId = String(t.trace_id).slice(0, 16) + '…';
+    const ts = t.start_ms ? new Date(t.start_ms).toLocaleTimeString() : '';
+
+    return `
+      <div class="trace-item" onclick="selectTrace('${escHtml(t.trace_id)}', this)">
+        <div class="trace-id">${escHtml(shortId)}</div>
+        <div class="trace-meta">
+          <span class="trace-badge ${badgeClass}">${badgeText}</span>
+          <span style="font-size:10px;color:var(--dim)">${t.span_count} spans</span>
+          <span class="trace-duration">${dur}</span>
+        </div>
+        <div class="trace-services">${escHtml(services)}${ts ? ' · '+ts : ''}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Select + render trace ───────────────────────────────────────────────────────
+
+let activeTraceId = null;
+
+async function selectTrace(traceId, el) {
+  // Highlight selected row
+  document.querySelectorAll('.trace-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  activeTraceId = traceId;
+
+  document.getElementById('waterfall-empty').style.display = 'none';
+  document.getElementById('waterfall-svg-wrap').innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:center;height:200px"><span class="spinner"></span></div>';
+
+  try {
+    const r = await fetch(`${OBS_API}/traces/${traceId}/timeline`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const timeline = await r.json();
+    renderWaterfall(timeline);
+  } catch (err) {
+    document.getElementById('waterfall-svg-wrap').innerHTML =
+      `<div style="padding:24px;color:var(--red);font-size:12px">Failed to load: ${escHtml(err.message)}</div>`;
+  }
+}
+
+// ── D3 waterfall ──────────────────────────────────────────────────────────────
+
+function renderWaterfall(timeline) {
+  const { trace_id, total_duration_ms, spans } = timeline;
+
+  document.getElementById('waterfall-header').style.display = 'flex';
+  document.getElementById('wf-trace-id').textContent = trace_id.slice(0, 32);
+  document.getElementById('wf-stats').innerHTML = `
+    <span>Spans: <strong style="color:var(--text)">${spans.length}</strong></span>
+    <span>Duration: <strong style="color:var(--gold)">${total_duration_ms}ms</strong></span>
+    <span>Services: <strong style="color:var(--text)">${[...new Set(spans.map(s => s.service_name))].length}</strong></span>
+  `;
+
+  const wrap = document.getElementById('waterfall-svg-wrap');
+  wrap.innerHTML = '';
+
+  const ROW_H    = 32;
+  const LABEL_W  = 260;  // left column for service + operation
+  const MARGIN   = { top: 36, bottom: 20 };
+  const totalW   = wrap.clientWidth || 800;
+  const barW     = totalW - LABEL_W - 20;
+  const totalH   = spans.length * ROW_H + MARGIN.top + MARGIN.bottom;
+
+  const x = d3.scaleLinear()
+    .domain([0, Math.max(total_duration_ms, 1)])
+    .range([0, barW]);
+
+  const svg = d3.select(wrap)
+    .append('svg')
+    .attr('width', totalW)
+    .attr('height', totalH);
+
+  const g = svg.append('g').attr('transform', `translate(${LABEL_W},${MARGIN.top})`);
+
+  // Tick lines + labels
+  const ticks = x.ticks(6);
+  ticks.forEach(t => {
+    g.append('line')
+      .attr('class', 'wf-tick-line')
+      .attr('x1', x(t)).attr('x2', x(t))
+      .attr('y1', -20).attr('y2', spans.length * ROW_H);
+    g.append('text')
+      .attr('class', 'wf-tick-label')
+      .attr('x', x(t)).attr('y', -8)
+      .attr('text-anchor', 'middle')
+      .text(`${t}ms`);
+  });
+
+  // Header separator
+  g.append('line')
+    .attr('class', 'wf-header-line')
+    .attr('x1', 0).attr('x2', barW)
+    .attr('y1', -4).attr('y2', -4);
+
+  // Rows
+  spans.forEach((span, i) => {
+    const y = i * ROW_H;
+    const colour = serviceColour(span.service_name);
+    const isError = span.status === 'error';
+
+    // Background hover
+    svg.append('rect')
+      .attr('class', 'wf-row-bg')
+      .attr('x', 0).attr('y', y + MARGIN.top)
+      .attr('width', totalW).attr('height', ROW_H - 1)
+      .style('cursor', 'pointer')
+      .on('click', () => showSpanDetail(span));
+
+    // Left label: service + operation
+    const indent = span.depth * 12;
+    svg.append('text')
+      .attr('class', 'wf-service-label')
+      .attr('x', 8 + indent).attr('y', y + MARGIN.top + 13)
+      .attr('fill', colour)
+      .attr('font-size', 9)
+      .text(span.service_name.slice(0, 14));
+
+    svg.append('text')
+      .attr('class', 'wf-op-label')
+      .attr('x', 8 + indent).attr('y', y + MARGIN.top + 26)
+      .attr('fill', isError ? 'var(--red)' : 'var(--text)')
+      .attr('font-size', 11)
+      .text(span.operation_name.length > 24
+        ? span.operation_name.slice(0, 22) + '…'
+        : span.operation_name);
+
+    // Waterfall bar
+    const bx = x(span.start_offset_ms);
+    const bw = Math.max(x(span.duration_ms), 3);
+    g.append('rect')
+      .attr('class', 'wf-span-bar')
+      .attr('x', bx).attr('y', y + 6)
+      .attr('width', bw).attr('height', ROW_H - 14)
+      .attr('fill', isError ? 'var(--red)' : colour)
+      .attr('fill-opacity', 0.7)
+      .style('cursor', 'pointer')
+      .on('click', () => showSpanDetail(span));
+
+    // Duration label
+    if (bw > 30) {
+      g.append('text')
+        .attr('class', 'wf-span-label')
+        .attr('x', bx + bw + 4).attr('y', y + ROW_H / 2 + 1)
+        .attr('dominant-baseline', 'middle')
+        .text(`${span.duration_ms}ms`);
+    }
+  });
+}
+
+// ── Span detail ────────────────────────────────────────────────────────────────
+
+function showSpanDetail(span) {
+  const panel = document.getElementById('span-detail');
+  const content = document.getElementById('span-detail-content');
+  const colour = serviceColour(span.service_name);
+
+  const attrs = typeof span.attributes === 'object' ? span.attributes : {};
+  const attrRows = Object.entries(attrs).map(([k, v]) =>
+    `<div class="attr-row"><span class="attr-key">${escHtml(k)}</span><span class="attr-val">${escHtml(String(v))}</span></div>`
+  ).join('');
+
+  const events = Array.isArray(span.events) ? span.events : [];
+  const eventRows = events.map(e =>
+    `<div style="padding:4px 0;border-bottom:1px solid rgba(212,168,67,.05);font-size:10px">
+      <span style="color:var(--gold)">${escHtml(e.name)}</span>
+    </div>`
+  ).join('');
+
+  content.innerHTML = `
+    <div class="detail-section">
+      <div class="detail-label">Operation</div>
+      <div class="detail-value" style="color:${colour};font-weight:600">${escHtml(span.operation_name)}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Service</div>
+      <div class="detail-value">${escHtml(span.service_name)}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Duration</div>
+      <div class="detail-value" style="color:var(--gold)">${span.duration_ms}ms</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Status</div>
+      <div class="detail-value" style="color:${span.status==='error'?'var(--red)':'var(--green)'}">${span.status}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Span ID</div>
+      <div class="detail-value" style="font-size:9px;color:var(--dim)">${span.span_id}</div>
+    </div>
+    ${span.parent_span_id ? `
+    <div class="detail-section">
+      <div class="detail-label">Parent Span</div>
+      <div class="detail-value" style="font-size:9px;color:var(--dim)">${span.parent_span_id}</div>
+    </div>` : ''}
+    ${attrRows ? `
+    <div class="detail-section">
+      <div class="detail-label">Attributes</div>
+      ${attrRows}
+    </div>` : ''}
+    ${eventRows ? `
+    <div class="detail-section">
+      <div class="detail-label">Events (${events.length})</div>
+      ${eventRows}
+    </div>` : ''}
+  `;
+  panel.classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('span-detail').classList.remove('open');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Auto-load on page open
+loadTraces();
+
+// Auto-refresh every 30s
+setInterval(loadTraces, 30000);
+</script>
+</body>
+</html>
