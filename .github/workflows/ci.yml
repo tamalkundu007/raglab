@@ -1,8 +1,9 @@
 # RAGLab — Continuous Integration
 #
 # Runs on every push and pull request.
-# Steps: ruff lint → pytest across all packages and services.
+# Steps: ruff lint → pytest (unit + integration + E2E) → Docker build check.
 # No cloud credentials needed — all tests are infra-free.
+# R6: added raglab-eval, OTel SDK, observability service to install matrix.
 #
 # Matrix strategy: runs Python 3.12 (minimum supported version).
 
@@ -69,6 +70,7 @@ jobs:
             ./packages/raglab-common \
             ./packages/raglab-chunkers \
             ./packages/raglab-retrievers \
+            ./packages/raglab-eval \
             ./services/api-gateway \
             ./services/ingestion \
             ./services/embedding \
@@ -97,19 +99,41 @@ jobs:
             azure-storage-blob \
             aio-pika \
             openai \
-            anthropic
+            anthropic \
+            opentelemetry-api \
+            opentelemetry-sdk \
+            opentelemetry-instrumentation-fastapi \
+            opentelemetry-instrumentation-httpx \
+            opentelemetry-instrumentation-sqlalchemy \
+            redis
 
-      - name: Run tests
+      - name: Run unit tests
         run: |
-          uv run pytest packages/ services/ tests/ \
+          uv run pytest packages/ services/ \
             --tb=short \
             -q \
             -W ignore::DeprecationWarning \
-            --junitxml=test-results/junit.xml \
+            --junitxml=test-results/junit-unit.xml \
             --cov=packages \
             --cov=services \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing
+
+      - name: Run integration tests
+        run: |
+          uv run pytest tests/integration/ \
+            --tb=short \
+            -q \
+            -W ignore::DeprecationWarning \
+            --junitxml=test-results/junit-integration.xml
+
+      - name: Run E2E tests
+        run: |
+          uv run pytest tests/e2e/ \
+            --tb=short \
+            -q \
+            -W ignore::DeprecationWarning \
+            --junitxml=test-results/junit-e2e.xml
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -141,6 +165,8 @@ jobs:
           - pipeline
           - storage
           - ui
+          - graph
+          - observability
     steps:
       - uses: actions/checkout@v4
 
