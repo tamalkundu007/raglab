@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab R6 — Release Notes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0a0a0f;--surface:#111118;--card:#1c1c25;--elevated:#18181f;--gold:#d4a843;--gold-dim:rgba(212,168,67,.12);--text:#f0ede8;--muted:#9a9490;--dim:#5a5650;--green:#3ecf8e;--blue:#5e9cf5;--orange:#f0944d;--red:#f26464;--purple:#a78bfa;--teal:#2dd4bf;--border:rgba(212,168,67,.15);--border-hi:rgba(212,168,67,.45);--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;--ui:'Space Mono',monospace}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(212,168,67,.3);border-radius:3px}
+    .hero{background:linear-gradient(135deg,#0a0a0f 0%,#0a0a10 60%,#0d0a0f 100%);border-bottom:1px solid var(--border);padding:64px 48px 48px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(94,156,245,.07) 0%,transparent 55%),radial-gradient(ellipse at 20% 80%,rgba(212,168,67,.05) 0%,transparent 45%);pointer-events:none}
+    .hero-eyebrow{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);margin-bottom:16px}
+    .hero-title{font-family:var(--display);font-size:clamp(36px,5vw,64px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:16px}
+    .hero-title span{color:var(--blue)}
+    .hero-sub{font-size:15px;color:var(--muted);max-width:620px;margin-bottom:32px}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:20px;font-family:var(--ui);font-size:11px;color:var(--dim)}
+    .hero-meta strong{color:var(--muted)}
+    .stats-bar{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+    .stat{flex:1;min-width:120px;padding:20px 24px;border-right:1px solid var(--border)}
+    .stat:last-child{border-right:none}
+    .stat-value{font-family:var(--display);font-size:28px;font-weight:800;color:var(--blue);line-height:1;margin-bottom:4px}
+    .stat-label{font-size:9px;color:var(--dim);font-family:var(--ui);text-transform:uppercase;letter-spacing:.1em}
+    .container{max-width:1080px;margin:0 auto;padding:0 48px 80px}
+    .section{padding:48px 0;border-bottom:1px solid var(--border)}
+    .section:last-child{border-bottom:none}
+    .section-label{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+    .section-title{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+    .section-lead{font-size:13px;color:var(--muted);margin-bottom:28px;max-width:640px}
+    table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px}
+    th{font-family:var(--ui);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface)}
+    td{padding:9px 12px;border-bottom:1px solid rgba(212,168,67,.05);vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:20px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;transition:border-color .15s}
+    .card:hover{border-color:var(--border-hi)}
+    .card-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .card-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .card-name{font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.06em}
+    .card-desc{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px}
+    .tag-row{display:flex;flex-wrap:wrap;gap:4px}
+    .tag{font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(212,168,67,.06);color:var(--dim);border:1px solid var(--border);font-family:var(--ui)}
+    .obs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:16px}
+    .obs-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:14px}
+    .obs-route{font-family:var(--ui);font-size:10px;color:var(--blue);margin-bottom:6px}
+    .obs-desc{font-size:11px;color:var(--muted);line-height:1.6}
+    .interview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+    .interview-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;padding:16px}
+    .interview-q{font-weight:600;font-size:12px;margin-bottom:8px}
+    .interview-a{font-size:11px;color:var(--muted);line-height:1.7}
+    .roadmap{display:flex;flex-direction:column;gap:0}
+    .r-row{display:grid;grid-template-columns:100px 1fr;padding:14px 0;border-bottom:1px solid rgba(212,168,67,.06);align-items:start}
+    .r-tag{font-family:var(--ui);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:2px}
+    .done{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border-hi)}
+    .next{background:rgba(240,148,77,.1);color:var(--orange);border:1px solid rgba(240,148,77,.3)}
+    .r-content{padding-left:16px}
+    .r-name{font-weight:600;margin-bottom:2px}
+    .r-desc{font-size:11px;color:var(--muted)}
+    .footer{background:var(--surface);border-top:1px solid var(--border);padding:28px 48px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--dim);font-family:var(--ui)}
+    .footer a{color:var(--gold);text-decoration:none}
+    @media(max-width:640px){.hero,.container,.footer{padding-left:20px;padding-right:20px}.stats-bar{flex-direction:column}.stat{border-right:none;border-bottom:1px solid var(--border)}}
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Release Notes · June 2026</div>
+  <h1 class="hero-title">RAGLab <span>R6</span></h1>
+  <p class="hero-sub">Observability + Full Testing. Six native D3.js views. Every trace, chunk, retrieval score, and cost visible — inside the platform, not bouncing to Grafana.</p>
+  <div class="hero-meta">
+    <div><strong>raglab-common</strong> v0.2.0</div>
+    <div><strong>observability-service</strong> v0.2.0</div>
+    <div><strong>New tests</strong> 253</div>
+    <div><strong>Total passing</strong> 1,811</div>
+    <div><strong>E2E journeys</strong> 12</div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-value">6</div><div class="stat-label">Native Views</div></div>
+  <div class="stat"><div class="stat-value">253</div><div class="stat-label">New Tests</div></div>
+  <div class="stat"><div class="stat-value">1,811</div><div class="stat-label">Total Passing</div></div>
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Infra for Tests</div></div>
+  <div class="stat"><div class="stat-value">55</div><div class="stat-label">Integration Tests</div></div>
+  <div class="stat"><div class="stat-value">12</div><div class="stat-label">E2E Journeys</div></div>
+</div>
+
+<div class="container">
+
+<div class="section">
+  <div class="section-label">Observability Views</div>
+  <div class="section-title">Six Native Views. No External Tools.</div>
+  <div class="section-lead">All served from observability-service. Dark-gold theme. Read-only — never mutates pipeline state.</div>
+  <div class="obs-grid">
+    <div class="obs-card">
+      <div class="obs-route">GET /obs/viewer</div>
+      <div class="obs-desc"><strong style="color:var(--text)">Distributed Trace Viewer.</strong> D3.js waterfall timeline. Every service hop timed. Depth-indented parent→child spans. Error spans red. Expandable detail panel.</div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-route">GET /obs/inspector</div>
+      <div class="obs-desc"><strong style="color:var(--text)">Chunk Inspector.</strong> Exact text of each chunk, token count, quality score, quality action (accepted/flagged/excluded). Filter + sort by quality.</div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-route">GET /obs/retrieval/scorer</div>
+      <div class="obs-desc"><strong style="color:var(--text)">Retrieval Scorer.</strong> Per-query strategy, top score, healed badge. D3 score distribution (5 buckets). Healing stats: heal rate %, avg top score.</div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-route">GET /obs/cost/dashboard</div>
+      <div class="obs-desc"><strong style="color:var(--text)">Cost Dashboard.</strong> Token totals, estimated cost, D3 7-day trend, per-provider breakdown. Cache hit rate with ROI message.</div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-route">GET /obs/health/dashboard</div>
+      <div class="obs-desc"><strong style="color:var(--text)">Pipeline Health.</strong> Job success rate, failed jobs table, self-healing gate firings with pass-rate bars. Auto-refresh 15s.</div>
+    </div>
+    <div class="obs-card" style="border-left-color:var(--gold)">
+      <div class="obs-route" style="color:var(--gold)">GET /obs/traces</div>
+      <div class="obs-desc"><strong style="color:var(--text)">Trace API.</strong> list, get spans, get D3-ready timeline, service stats. All filtered, paginated, error-safe (DB down → 503, not 500).</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">New Components</div>
+  <div class="section-title">What R6 Ships</div>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header"><div class="card-dot" style="background:var(--blue)"></div><div class="card-name" style="color:var(--blue)">OTel Tracing (raglab-common)</div></div>
+      <div class="card-desc">PostgresSpanExporter, configure_tracing, make_trace_middleware, trace_headers. 10 services wired. Noop stubs when SDK unavailable.</div>
+      <div class="tag-row"><span class="tag">X-Trace-Id propagated</span><span class="tag">structlog contextvars</span><span class="tag">graceful degradation</span></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot" style="background:var(--teal)"></div><div class="card-name" style="color:var(--teal)">observability-service v0.2.0</div></div>
+      <div class="card-desc">Activated from R1 stub. 5 routers (traces, chunks, retrieval, cost, health), 5 DB query modules, 6 Jinja2+D3 templates. DB unavailable → 503 (not crash).</div>
+      <div class="tag-row"><span class="tag">read-only</span><span class="tag">zero Grafana</span><span class="tag">D3.js v7</span></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot" style="background:var(--green)"></div><div class="card-name" style="color:var(--green)">Integration Tests (55)</div></div>
+      <div class="card-desc">Gateway routing + trace propagation, pipeline runner contracts, IngestionMessage serialisation, idempotency, DLQ, cross-service data shapes, cache + quality gate.</div>
+      <div class="tag-row"><span class="tag">zero infra</span><span class="tag">all mocked</span><span class="tag">typed exception contracts</span></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot" style="background:var(--purple)"></div><div class="card-name" style="color:var(--purple)">E2E Tests (32 new)</div></div>
+      <div class="card-desc">12 complete journeys: full ingest→answer, all 7 retrieval strategies, self-healing paths (quality/escalation/groundedness), graph RAG, re-ingestion idempotency, error paths.</div>
+      <div class="tag-row"><span class="tag">zero infra</span><span class="tag">word_count tokenizer</span><span class="tag">no network deps</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Testing Strategy</div>
+  <div class="section-title">Three Layers, One Signal</div>
+  <table>
+    <thead><tr><th>Layer</th><th>Files</th><th>Count</th><th>What it catches</th></tr></thead>
+    <tbody>
+      <tr><td style="color:var(--gold)">Unit</td><td style="color:var(--muted)">packages/*/tests, services/*/tests</td><td>1,724</td><td>Logic errors, model contracts, heuristic scores, cache keys</td></tr>
+      <tr><td style="color:var(--blue)">Integration</td><td style="color:var(--muted)">tests/integration/</td><td>55</td><td>Service interface mismatches, async/idempotency, DLQ behaviour</td></tr>
+      <tr><td style="color:var(--green)">E2E</td><td style="color:var(--muted)">tests/e2e/</td><td>68</td><td>Journey regressions, self-healing paths, error surfaces</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-label">Interview Angles</div>
+  <div class="section-title">What R6 Unlocks</div>
+  <div class="interview-grid">
+    <div class="interview-card">
+      <div class="interview-q">"How do you debug a wrong answer?"</div>
+      <div class="interview-a">Trace Viewer: every hop timed. Chunk Inspector: exact text + quality scores. Retrieval Scorer: strategy, candidates, healing delta. Pipeline Health: which gate fired. "The answer was bad" becomes a diagnosable chain.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Observability vs monitoring?"</div>
+      <div class="interview-a">Monitoring tells you something broke. Observability lets you ask why without shipping new code. OTel traces + structured events + the ability to inspect any past request.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Why OpenTelemetry?"</div>
+      <div class="interview-a">Vendor-neutral. Instrument once, swap backends (Jaeger → Grafana Tempo → cloud-native). Same cloud-agnostic principle as the storage/vector/LLM abstractions throughout the platform.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Cost observability?"</div>
+      <div class="interview-a">Per-request token attribution + embedding cache hit rate on /obs/cost/dashboard. "73% cache hit rate saves 73% of embedding API calls on re-ingestion" — traceable to a specific endpoint, not a spreadsheet estimate.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Unit vs integration vs E2E?"</div>
+      <div class="interview-a">Unit: logic in isolation. Integration: service contracts and async/idempotency/DLQ. E2E: complete user journeys including self-healing paths. Each layer catches a different bug class.</div>
+    </div>
+    <div class="interview-card">
+      <div class="interview-q">"Zero infra for 1,811 tests?"</div>
+      <div class="interview-a">PostgresSpanExporter buffers on failure. EmbeddingCache degrades gracefully. Pipeline runner accepts injected mocks. TextChunker uses word_count tokenizer (no tiktoken network). Every test is CI-safe.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Roadmap</div>
+  <div class="section-title">7-Release Plan</div>
+  <div class="roadmap">
+    <div class="r-row"><span class="r-tag done">R1 ✓</span><div class="r-content"><div class="r-name">Full Shell + Core Pipeline</div><div class="r-desc">13 services, TextChunker, DenseRetriever. 369 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R2 ✓</span><div class="r-content"><div class="r-name">Advanced Chunking + Cloud Storage</div><div class="r-desc">6 chunkers, S3 + Azure Blob. 564 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R3 ✓</span><div class="r-content"><div class="r-name">Retrieval Power + CI/CD</div><div class="r-desc">BM25, Hybrid, MMR, ReRanker, Compression. GitHub Actions. 796 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R4 ✓</span><div class="r-content"><div class="r-name">Graph RAG + Advanced Document Types</div><div class="r-desc">PDFImageChunker, TableStitchChunker, graph-service, D3.js Explorer. 1,287 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R5 ✓</span><div class="r-content"><div class="r-name">Self-Healing RAG + Cost Efficiency</div><div class="r-desc">raglab-eval, embedding cache, 3 heal gates, Healing Trace UI. 1,558 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R6 ✓</span><div class="r-content"><div class="r-name">Observability + Full Testing</div><div class="r-desc">6 native D3.js views, OTel, integration + E2E suites, CI wired. 1,811 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag next">R7</span><div class="r-content"><div class="r-name">Auth + Multi-tenancy + GCS + GCP</div><div class="r-desc">JWT auth, per-tenant isolation, RBAC, GCS backend, Terraform GCP activation.</div></div></div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <div>RAGLab R6 · Built by <a href="https://tamalkundu.com">Tamal Kundu</a> · June 2026</div>
+  <div><a href="https://github.com/tamalkundu007/raglab">GitHub</a> · Python 3.12 · FastAPI · OTel · D3.js · raglab-eval · Terraform</div>
+</div>
+
+</body>
+</html>

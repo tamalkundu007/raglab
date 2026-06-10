@@ -2,7 +2,7 @@
 
 > A fully configurable RAG Configuration Generator — microservices monorepo.
 
-[![Release](https://img.shields.io/badge/release-R5-f0944d)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-R6-5e9cf5)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://python.org)
 [![uv](https://img.shields.io/badge/package%20manager-uv-black)](https://docs.astral.sh/uv/)
 [![Ruff](https://img.shields.io/badge/linter-ruff-orange)](https://docs.astral.sh/ruff/)
@@ -32,7 +32,7 @@ raglab/
     ├── storage/            # File storage backend (local + S3 + Azure Blob)
     ├── ui/                 # Control Panel + Graph Explorer + Healing Trace
     ├── graph/              # GraphRAG — entity extraction, NetworkX, Leiden [R4]
-    ├── observability/      # [R6] LLMOps monitoring
+    ├── observability/      # OTel tracing + 6 views (trace/chunk/retrieval/cost/health) [R6]
     └── auth/               # [R7] Authentication
 ```
 
@@ -45,8 +45,8 @@ raglab/
 | **R3** | Retrieval Power + CI/CD | ✅ Done |
 | **R4** | Graph RAG + Advanced Document Types | ✅ Done |
 | **R5** | Self-Healing RAG + Cost Efficiency | ✅ Done |
-| R6 | Observability / LLMOps | 🔜 Next |
-| R7 | Auth + Multi-tenancy + GCS + GCP | 🔜 Planned |
+| **R6** | Observability + Full Testing | ✅ Done |
+| R7 | Auth + Multi-tenancy + GCS + GCP | 🔜 Next |
 
 ## R5 Active Components
 
@@ -59,7 +59,9 @@ raglab/
 | Storage | Local filesystem, S3, Azure Blob | GCS (R7) |
 | Graph | NetworkX + Leiden community detection, graph-service v0.2.0 | Neo4j (optional R6+) |
 | Eval / Self-Healing | ChunkQualityScorer, RetrievalHealer, GroundednessChecker (raglab-eval v0.1.0) | — |
-| Cache | Redis embedding cache (hit_rate_pct ROI metric) | Semantic cache (R6) |
+| Cache | Redis embedding cache (hit_rate_pct ROI metric) | Semantic cache (R7) |
+| Observability | OTel tracing, observability-service v0.2.0, 6 native D3.js views | — |
+| Testing | 1,811 tests: unit + integration (55) + E2E (68) | — |
 | Infrastructure | Azure AKS + AWS EKS (Terraform), HPA, PDB, Redis HA, IRSA | GCP GKE (R7) |
 
 ## Release Branches
