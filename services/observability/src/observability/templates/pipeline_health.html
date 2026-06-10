@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab — Pipeline Health</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0a0a0f;--surface:#111118;--card:#1c1c25;--elevated:#18181f;--gold:#d4a843;--gold-dim:rgba(212,168,67,.12);--text:#f0ede8;--muted:#9a9490;--dim:#5a5650;--green:#3ecf8e;--blue:#5e9cf5;--orange:#f0944d;--red:#f26464;--purple:#a78bfa;--border:rgba(212,168,67,.15);--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;--ui:'Space Mono',monospace}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;min-height:100vh}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(212,168,67,.25);border-radius:3px}
+    .topbar{display:flex;align-items:center;gap:14px;padding:0 20px;height:50px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+    .logo{font-family:var(--display);font-size:15px;font-weight:800;color:var(--gold);text-decoration:none;display:flex;align-items:center;gap:8px}
+    .logo-hex{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--bg);font-weight:800}
+    .badge{font-family:var(--ui);font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.08em;background:rgba(62,207,142,.12);color:var(--green);border:1px solid rgba(62,207,142,.3)}
+    .topbar-spacer{flex:1}
+    .back-link{font-family:var(--ui);font-size:11px;color:var(--muted);text-decoration:none}
+    .main{padding:24px;max-width:1100px;margin:0 auto}
+    .section{margin-bottom:28px}
+    .section-title{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--green);margin-bottom:12px}
+    .stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;flex:1;min-width:110px}
+    .stat-val{font-family:var(--display);font-size:24px;font-weight:800;line-height:1;margin-bottom:3px}
+    .stat-label{font-size:9px;font-family:var(--ui);text-transform:uppercase;letter-spacing:.1em;color:var(--dim)}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{font-family:var(--ui);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);padding:7px 10px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface)}
+    td{padding:8px 10px;border-bottom:1px solid rgba(212,168,67,.05)}
+    tr:hover td{background:rgba(212,168,67,.02)}
+    .gate-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:16px}
+    .gate-name{font-family:var(--ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;min-width:140px}
+    .gate-bar-wrap{flex:1;background:var(--elevated);border-radius:3px;height:6px;overflow:hidden}
+    .gate-bar{height:100%;border-radius:3px}
+    .gate-stat{font-size:10px;color:var(--muted);min-width:60px;text-align:right}
+    .action-tag{font-size:9px;padding:1px 5px;border-radius:3px;font-family:var(--ui)}
+    .empty{padding:20px;text-align:center;color:var(--dim);font-size:11px}
+    .error-preview{font-size:10px;color:var(--red);max-width:300px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="{{ control_panel_url }}"><div class="logo-hex">R</div>RAGLab</a>
+  <span class="badge">R6 · Pipeline Health</span>
+  <div class="topbar-spacer"></div>
+  <a class="back-link" href="{{ control_panel_url }}">← Control Panel</a>
+</header>
+
+<div class="main">
+
+  <div class="section">
+    <div class="section-title">Pipeline Jobs (Last 24h)</div>
+    <div class="stat-row" id="health-stats">
+      <div class="stat"><div class="stat-val">—</div><div class="stat-label">Total Jobs</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Self-Healing Gate Firings</div>
+    <div id="gate-list"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Failed Jobs</div>
+    <div id="failed-table"><div class="empty">Loading…</div></div>
+  </div>
+
+</div>
+
+<script>
+const OBS_API = '{{ obs_api_base }}';
+
+async function loadAll() {
+  await Promise.all([loadHealth(), loadGates(), loadFailed()]);
+}
+
+async function loadHealth() {
+  try {
+    const r = await fetch(`${OBS_API}/health/pipeline`);
+    if (!r.ok) return;
+    const s = await r.json();
+    const total = s.total_jobs || 0;
+    const failed = s.failed || 0;
+    const success = s.successful || 0;
+    const successRate = total > 0 ? Math.round((success/total)*100) : 0;
+    document.getElementById('health-stats').innerHTML = `
+      <div class="stat"><div class="stat-val" style="color:var(--text)">${total}</div><div class="stat-label">Total Jobs</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--green)">${success}</div><div class="stat-label">Successful</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--red)">${failed}</div><div class="stat-label">Failed</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--gold)">${successRate}%</div><div class="stat-label">Success Rate</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--muted)">${s.avg_duration_ms||'—'}ms</div><div class="stat-label">Avg Duration</div></div>
+    `;
+  } catch {}
+}
+
+async function loadGates() {
+  const el = document.getElementById('gate-list');
+  try {
+    const r = await fetch(`${OBS_API}/health/gates`);
+    if (!r.ok) { el.innerHTML = '<div class="empty">No gate data.</div>'; return; }
+    const gates = await r.json();
+    if (!gates.length) { el.innerHTML = '<div class="empty">No self-healing gates fired yet.</div>'; return; }
+    const GATE_COLOURS = {'chunk_quality':'var(--blue)','retrieval_feedback':'var(--orange)','groundedness':'var(--green)'};
+    el.innerHTML = gates.map(g => {
+      const pct = g.fired_count > 0 ? Math.round((g.passed_count/g.fired_count)*100) : 0;
+      const colour = GATE_COLOURS[g.gate_name] || 'var(--gold)';
+      return `
+        <div class="gate-card">
+          <span class="gate-name" style="color:${colour}">${escHtml(g.gate_name||'—')}</span>
+          <div class="gate-bar-wrap"><div class="gate-bar" style="width:${pct}%;background:${colour}"></div></div>
+          <span class="gate-stat">${pct}% pass</span>
+          <span class="gate-stat">${g.fired_count} fired</span>
+          <span class="gate-stat" style="color:${colour}">${g.avg_score??'—'}</span>
+        </div>`;
+    }).join('');
+  } catch {}
+}
+
+async function loadFailed() {
+  const el = document.getElementById('failed-table');
+  try {
+    const r = await fetch(`${OBS_API}/health/failed-jobs`);
+    if (!r.ok) { el.innerHTML = '<div class="empty">No data.</div>'; return; }
+    const jobs = await r.json();
+    if (!jobs.length) { el.innerHTML = '<div class="empty" style="color:var(--green)">✓ No failed jobs. Pipeline is healthy.</div>'; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Doc ID</th><th>Filename</th><th>Duration</th><th>Error</th></tr></thead>
+      <tbody>${jobs.map(j => `<tr>
+        <td style="color:var(--muted);font-size:10px">${escHtml((j.doc_id||'—').slice(0,12))}…</td>
+        <td style="color:var(--text)">${escHtml(j.filename||'—')}</td>
+        <td style="color:var(--dim)">${j.duration_ms||'—'}ms</td>
+        <td><div class="error-preview">${escHtml(j.error_message||'—')}</div></td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch {}
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+loadAll();
+setInterval(loadAll, 15000);
+</script>
+</body>
+</html>
