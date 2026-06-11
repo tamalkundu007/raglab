@@ -53,3 +53,6 @@ from raglab_common.tracing import (
     current_trace_id,
     make_trace_middleware,
 )
+# R7 — Identity context (imported from auth-service, re-exported for convenience)
+# Services import IdentityContext from raglab_common for type hints
+# The full auth module lives in auth-service

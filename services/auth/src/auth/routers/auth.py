@@ -143,6 +143,24 @@ async def me(request: Request) -> dict:
     }
 
 
+
+
+@router.get("/permissions")
+async def permissions(request: Request) -> dict:
+    """
+    Return detailed permission summary for the current user.
+    Useful for UI permission checks and debugging.
+    """
+    try:
+        identity = IdentityContext.from_headers(dict(request.headers))
+    except ValueError:
+        identity = getattr(request.state, "identity", None)
+        if identity is None:
+            raise HTTPException(status_code=401, detail="Not authenticated.")
+
+    from auth.middleware.role_enforcement import get_permissions_summary
+    return get_permissions_summary(identity)
+
 @router.post("/logout")
 async def logout(request: Request) -> dict:
     """
