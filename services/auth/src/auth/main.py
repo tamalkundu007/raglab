@@ -31,6 +31,7 @@ from raglab_common.logging import configure_logging, get_logger
 from raglab_common.models import HealthModel
 from raglab_common.tracing import configure_tracing, make_trace_middleware
 from auth.routers.auth import router as auth_router
+import auth.providers.google_cognito  # registers Google + Cognito providers
 
 log = get_logger(__name__)
 configure_logging(level="info", json_logs=False)
@@ -67,6 +68,37 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         log.info("auth.provider_not_configured", provider="entra_id",
                  hint="Set RAGLAB_ENTRA_CLIENT_ID to activate")
 
+
+    # Google OIDC — activated if env vars present
+    google_client_id = os.getenv("RAGLAB_GOOGLE_CLIENT_ID", "")
+    if google_client_id:
+        from auth.providers.base import OIDCProviderFactory
+        from auth.models import OIDCProviderConfig
+        cfg = OIDCProviderConfig(
+            provider_name="google",
+            client_id=google_client_id,
+            client_secret=os.getenv("RAGLAB_GOOGLE_CLIENT_SECRET", ""),
+            tenant_id=os.getenv("RAGLAB_GOOGLE_HD", ""),  # hosted domain
+            redirect_uri=os.getenv("RAGLAB_GOOGLE_REDIRECT_URI", ""),
+        )
+        app.state.providers["google"] = OIDCProviderFactory.create("google", cfg)
+        log.info("auth.provider_loaded", provider="google")
+
+    # AWS Cognito — activated if env vars present
+    cognito_pool_id  = os.getenv("RAGLAB_COGNITO_USER_POOL_ID", "")
+    cognito_client   = os.getenv("RAGLAB_COGNITO_CLIENT_ID", "")
+    if cognito_pool_id and cognito_client:
+        from auth.providers.base import OIDCProviderFactory
+        from auth.models import OIDCProviderConfig
+        cfg = OIDCProviderConfig(
+            provider_name="cognito",
+            client_id=cognito_client,
+            client_secret=os.getenv("RAGLAB_COGNITO_CLIENT_SECRET", ""),
+            tenant_id=cognito_pool_id,  # pool ID used as tenant scope
+            redirect_uri=os.getenv("RAGLAB_COGNITO_REDIRECT_URI", ""),
+        )
+        app.state.providers["cognito"] = OIDCProviderFactory.create("cognito", cfg)
+        log.info("auth.provider_loaded", provider="cognito")
     log.info("service.started", service="auth",
              providers=list(app.state.providers.keys()))
     yield

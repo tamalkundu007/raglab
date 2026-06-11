@@ -101,7 +101,7 @@ class OIDCProviderBase(ABC):
         provider: str,
     ) -> IdentityContext:
         """Map TokenClaims → IdentityContext. Shared across providers."""
-        tenant_id = claims.tenant_id or claims.sub.split("@")[0] if "@" in claims.sub else claims.sub[:8]
+        tenant_id = claims.tenant_id or (claims.sub.split("@")[0] if "@" in claims.sub else claims.sub[:8])
         roles = self._map_roles(claims.roles)
         return IdentityContext(
             user_id=claims.sub,
