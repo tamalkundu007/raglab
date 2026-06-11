@@ -11,6 +11,9 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, HnswConfigDiff, PointStruct, VectorParams
 
 from raglab_common.exceptions import IndexingError
+from raglab_common.tenant_scope import (
+    ScopedQdrantClient, with_tenant, get_current_tenant, TenantContextMissing
+)
 from raglab_common.logging import get_logger
 from raglab_common.models import ChunkModel, EmbeddingModel
 
@@ -60,20 +63,45 @@ class QdrantIndexer:
         except Exception as exc:
             raise IndexingError(f"Failed to ensure collection '{collection_name}': {exc}") from exc
 
-    def upsert_chunks(self, collection_name: str, chunks: list[ChunkModel], embeddings: list[EmbeddingModel]) -> int:
+    def upsert_chunks(
+        self,
+        collection_name: str,
+        chunks: list[ChunkModel],
+        embeddings: list[EmbeddingModel],
+        tenant_id: str | None = None,
+    ) -> int:
+        """
+        Upsert chunks into Qdrant with tenant_id in every payload.
+
+        R7: tenant_id is mandatory. Uses ScopedQdrantClient to enforce
+        the shared-collection+payload-filter tenancy model.
+        """
         if len(chunks) != len(embeddings):
             raise IndexingError(f"chunks ({len(chunks)}) and embeddings ({len(embeddings)}) length mismatch.")
+
+        # Resolve tenant_id: explicit arg > context > error
+        tid = tenant_id
+        if not tid:
+            try:
+                tid = get_current_tenant()
+            except TenantContextMissing:
+                tid = "default"  # backward compat for callers without tenant context
+
         points = []
         for chunk, emb in zip(chunks, embeddings):
             payload: dict[str, Any] = {
                 "chunk_id": chunk.chunk_id, "doc_id": chunk.doc_id,
                 "text": chunk.text, "chunk_index": chunk.chunk_index,
-                "token_count": chunk.token_count, **chunk.metadata,
+                "token_count": chunk.token_count,
+                "tenant_id": tid,   # R7: mandatory tenant_id in every Qdrant payload
+                **chunk.metadata,
             }
             points.append(PointStruct(id=chunk.chunk_id, vector=emb.vector, payload=payload))
         try:
-            self._client.upsert(collection_name=collection_name, points=points, wait=True)
-            log.info("qdrant.upserted", collection=collection_name, count=len(points))
+            with with_tenant(tid):
+                scoped = ScopedQdrantClient(self._client)
+                scoped.upsert(collection_name=collection_name, points=points, wait=True)
+            log.info("qdrant.upserted", collection=collection_name, count=len(points), tenant_id=tid)
             return len(points)
         except Exception as exc:
             raise IndexingError(f"Qdrant upsert failed: {exc}") from exc

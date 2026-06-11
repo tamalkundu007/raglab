@@ -69,6 +69,9 @@ class IngestionMessage(BaseModel):
     doc_metadata: dict[str, Any] = Field(default_factory=dict)
     retry_count: int = 0
     published_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # R7: tenant isolation — mandatory for all new ingestion jobs
+    tenant_id: str = Field(default="default", description="Tenant scope (R7)")
+    user_id: str = Field(default="", description="User who triggered ingestion (R7)")
 
     def to_bytes(self) -> bytes:
         """Serialise to UTF-8 JSON bytes for AMQP body."""

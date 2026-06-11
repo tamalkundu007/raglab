@@ -23,6 +23,11 @@ from fastapi import FastAPI
 
 from raglab_common.logging import configure_logging, get_logger
 from raglab_common.tracing import configure_tracing, make_trace_middleware
+try:
+    from auth.middleware.role_enforcement import RoleEnforcementMiddleware
+    _AUTH_AVAILABLE = True
+except ImportError:
+    _AUTH_AVAILABLE = False
 from raglab_common.models import HealthModel
 from storage.factory import StorageFactory
 from storage.routers.storage import router as storage_router
@@ -86,6 +91,8 @@ app = FastAPI(
 )
 
 app.add_middleware(make_trace_middleware("storage"))
+if _AUTH_AVAILABLE:
+    app.add_middleware(RoleEnforcementMiddleware, require_auth=False)  # optional in storage
 
 app.include_router(storage_router)
 

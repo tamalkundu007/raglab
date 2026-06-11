@@ -88,6 +88,7 @@ class DocumentModel(BaseModel):
     content_type: str
     storage_path: str
     idempotency_key: str | None = None
+    tenant_id: str = Field(default="default", description="Tenant owner of this chunk (R7)")
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=_utcnow)
 
@@ -100,6 +101,7 @@ class ChunkModel(BaseModel):
     text: str
     chunk_index: int
     token_count: int
+    tenant_id: str = Field(default="default", description="Tenant owner of this chunk (R7)")
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=_utcnow)
 
@@ -125,6 +127,9 @@ class QueryModel(BaseModel):
     llm_provider: LLMProvider = LLMProvider.AZURE_OPENAI
     top_k: int = Field(default=5, ge=1, le=50)
     metadata_filter: dict[str, Any] = Field(default_factory=dict)
+    # R7: tenant isolation
+    tenant_id: str = Field(default="default", description="Tenant scope (R7)")
+    user_id: str = Field(default="", description="User making the query (R7)")
     created_at: datetime = Field(default_factory=_utcnow)
 
 

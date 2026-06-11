@@ -48,7 +48,7 @@ class DocumentRecord(Base):
 
     __tablename__ = "documents"
     __table_args__ = (
-        UniqueConstraint("idempotency_key", name="uq_documents_idempotency_key"),
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_documents_tenant_idempotency"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -59,6 +59,7 @@ class DocumentRecord(Base):
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
     content_type: Mapped[str] = mapped_column(String(128), nullable=False)
     storage_path: Mapped[str] = mapped_column(String(1024), nullable=False)
+    tenant_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True, default="default")
     collection: Mapped[str] = mapped_column(String(256), nullable=False, index=True)
     chunker_type: Mapped[str] = mapped_column(String(64), nullable=False, default="text")
     status: Mapped[str] = mapped_column(
@@ -105,6 +106,7 @@ class ChunkRecord(Base):
         nullable=False,
         index=True,
     )
+    tenant_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True, default="default")
     collection: Mapped[str] = mapped_column(String(256), nullable=False, index=True)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, nullable=False)

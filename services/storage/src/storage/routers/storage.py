@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from raglab_common.tenant_scope import scoped_storage_path, TenantContextMissing
 from raglab_common.exceptions import NotImplementedFeatureError, StorageError
 from raglab_common.logging import get_logger
 
@@ -58,17 +59,28 @@ def _get_backend(request: Request) -> Any:
 
 @router.post("/upload/{key:path}", response_model=UploadResponse)
 async def upload(key: str, body: UploadRequest, request: Request) -> UploadResponse:
-    """Upload bytes (base64-encoded) at the given key."""
+    """Upload bytes (base64-encoded) at the given key. R7: key is tenant-scoped."""
     backend = _get_backend(request)
     try:
         data = base64.b64decode(body.data_b64)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Invalid base64 data: {exc}")
 
+    # R7: scope the storage key with tenant prefix
+    # Falls back to bare key when no tenant context (backward compat)
+    tenant_id = None
+    identity = getattr(request.state, "identity", None)
+    if identity:
+        tenant_id = identity.tenant_id
     try:
-        uri = backend.upload(key, data)
+        scoped_key = scoped_storage_path(key, tenant_id=tenant_id) if tenant_id else key
+    except TenantContextMissing:
+        scoped_key = key
+
+    try:
+        uri = backend.upload(scoped_key, data)
         return UploadResponse(
-            key=key, uri=uri, size=len(data), backend=backend.backend_type
+            key=scoped_key, uri=uri, size=len(data), backend=backend.backend_type
         )
     except NotImplementedFeatureError as exc:
         raise HTTPException(status_code=501, detail=str(exc))
