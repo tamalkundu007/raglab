@@ -36,6 +36,13 @@ from raglab_common.models import HealthModel
 from api_gateway.health_registry import DOWNSTREAM_SERVICES, HealthRegistry
 from api_gateway.routers.gateway import router as gateway_router
 from api_gateway.settings import GatewaySettings
+# R7: JWT validation middleware — auth-service
+try:
+    from auth.middleware.jwt_validator import JWTValidatorMiddleware
+    _AUTH_AVAILABLE = True
+except ImportError:
+    _AUTH_AVAILABLE = False
+
 
 settings = GatewaySettings()
 configure_logging(level=settings.log_level, json_logs=settings.json_logs)
@@ -107,6 +114,15 @@ app = FastAPI(
 )
 
 app.add_middleware(make_trace_middleware("api-gateway"))
+
+# R7: JWT validation (bypass_auth=True when no providers configured — dev mode)
+if _AUTH_AVAILABLE:
+    _bypass = not bool(getattr(settings, "auth_enabled", False))
+    app.add_middleware(
+        JWTValidatorMiddleware,
+        providers={},        # populated in lifespan once auth-service loads providers
+        bypass_auth=_bypass,
+    )
 
 app.include_router(gateway_router)
 

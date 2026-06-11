@@ -15,3 +15,7 @@ class GatewaySettings(BaseServiceSettings):
 
     # How often to refresh downstream health cache (seconds)
     health_cache_ttl: float = 10.0
+
+    # ── Auth / JWT (R7) ───────────────────────────────────────────────────────
+    auth_enabled: bool = False        # True activates JWT validation at gateway
+    auth_service_url: str = "http://auth:8012"

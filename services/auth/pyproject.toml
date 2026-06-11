@@ -4,15 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "raglab-auth"
-version = "0.1.0"
-description = "Authentication and multi-tenancy"
+version = "0.2.0"
+description = "RAGLab authentication — OIDC/OAuth2 with Entra ID, Google, Cognito"
 requires-python = ">=3.12"
 dependencies = [
     "raglab-common",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "httpx>=0.27",
+    "pyjwt[cryptography]>=2.8",
+    "python-jose[cryptography]>=3.3",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/auth"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
