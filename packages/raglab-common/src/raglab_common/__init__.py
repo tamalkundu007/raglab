@@ -56,3 +56,14 @@ from raglab_common.tracing import (
 # R7 — Identity context (imported from auth-service, re-exported for convenience)
 # Services import IdentityContext from raglab_common for type hints
 # The full auth module lives in auth-service
+from raglab_common.tenant_scope import (
+    TenantContextMissing,
+    InvalidTenantIdError,
+    ScopedQdrantClient,
+    set_current_tenant,
+    get_current_tenant,
+    clear_current_tenant,
+    with_tenant,
+    scoped_cache_key,
+    scoped_storage_path,
+)
