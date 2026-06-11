@@ -38,6 +38,7 @@ import json
 from typing import Any
 
 from raglab_common.logging import get_logger
+from raglab_common.tenant_scope import scoped_cache_key, TenantContextMissing
 
 log = get_logger(__name__)
 
@@ -52,10 +53,27 @@ except ImportError:
 _KEY_PREFIX = "raglab:embed:"
 
 
-def _cache_key(text: str, provider: str, model: str) -> str:
-    """Deterministic SHA-256 cache key scoped by provider + model + text."""
+def _cache_key(text: str, provider: str, model: str, tenant_id: str = "") -> str:
+    """
+    Deterministic SHA-256 cache key scoped by tenant + provider + model + text.
+
+    R7: cache keys are tenant-scoped to prevent cross-tenant embedding reuse.
+    Format: raglab:{tenant_id}:embed:{sha256_hex}
+    Falls back to raglab::embed:{sha256_hex} when no tenant context (backward compat).
+    """
     raw = f"{provider}:{model}:{text}"
-    return _KEY_PREFIX + hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    # Resolve tenant: explicit arg > context > empty (no tenant scope)
+    tid = tenant_id
+    if not tid:
+        try:
+            from raglab_common.tenant_scope import get_current_tenant
+            tid = get_current_tenant()
+        except TenantContextMissing:
+            tid = ""
+    if tid:
+        return f"raglab:{tid}:embed:{sha}"
+    return _KEY_PREFIX + sha
 
 
 class EmbeddingCache:
@@ -125,7 +143,14 @@ class EmbeddingCache:
         if not self.enabled or self._client is None:
             return None
 
-        key = _cache_key(text, provider, model)
+        # Resolve tenant_id from context for cache key isolation
+        tenant_id = ""
+        try:
+            from raglab_common.tenant_scope import get_current_tenant
+            tenant_id = get_current_tenant()
+        except TenantContextMissing:
+            pass
+        key = _cache_key(text, provider, model, tenant_id=tenant_id)
         try:
             raw = self._client.get(key)
             if raw is None:
@@ -151,7 +176,14 @@ class EmbeddingCache:
         if not self.enabled or self._client is None:
             return
 
-        key = _cache_key(text, provider, model)
+        # Resolve tenant_id from context for cache key isolation
+        tenant_id = ""
+        try:
+            from raglab_common.tenant_scope import get_current_tenant
+            tenant_id = get_current_tenant()
+        except TenantContextMissing:
+            pass
+        key = _cache_key(text, provider, model, tenant_id=tenant_id)
         try:
             self._client.setex(key, self.ttl_seconds, json.dumps(vector))
             log.debug("embedding_cache.set", key=key[:16], ttl=self.ttl_seconds)
@@ -167,7 +199,14 @@ class EmbeddingCache:
         """
         if not self.enabled or self._client is None:
             return False
-        key = _cache_key(text, provider, model)
+        # Resolve tenant_id from context for cache key isolation
+        tenant_id = ""
+        try:
+            from raglab_common.tenant_scope import get_current_tenant
+            tenant_id = get_current_tenant()
+        except TenantContextMissing:
+            pass
+        key = _cache_key(text, provider, model, tenant_id=tenant_id)
         try:
             deleted = self._client.delete(key)
             return bool(deleted)

@@ -27,6 +27,7 @@ from raglab_common.models import ChunkModel, EmbeddingModel
 from raglab_common.queue import IngestionMessage
 from raglab_common.tracing import trace_headers, traced_span, get_tracer
 from pipeline.quality_gate import apply_quality_gate
+from raglab_common.tenant_scope import with_tenant, set_current_tenant
 
 log = get_logger(__name__)
 
@@ -49,6 +50,10 @@ async def run_pipeline(message: IngestionMessage, app_state: Any) -> None:
     """
     settings = getattr(app_state, "settings", None)
     log.info("pipeline.start", doc_id=message.doc_id, filename=message.filename)
+
+    # R7: set tenant context for all data operations in this pipeline run
+    tenant_id = getattr(message, "tenant_id", "default") or "default"
+    set_current_tenant(tenant_id)
 
     # Step 1: Read text from storage
     text = await _read_document(message.storage_path)

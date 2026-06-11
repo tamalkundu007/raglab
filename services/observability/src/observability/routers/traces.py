@@ -39,14 +39,24 @@ async def get_session(request: Request) -> AsyncSession:
 
 @router.get("/traces")
 async def list_traces(
+    request: Request,
     limit: int = 50,
     service: str | None = None,
     status: str | None = None,
     session: AsyncSession = Depends(get_session),
 ) -> list[dict]:
-    """List recent traces grouped by trace_id."""
+    """List recent traces grouped by trace_id.
+    R7: members see only their tenant. Admins see all.
+    """
+    # Tenant scoping from identity headers (optional — observability may not be gated)
+    tenant_id = None
+    identity = getattr(request.state, "identity", None)
+    if identity and not identity.is_admin:
+        tenant_id = identity.tenant_id
+
     return await list_recent_traces(
-        session, limit=limit, service_name=service, status=status
+        session, limit=limit, service_name=service, status=status,
+        tenant_id=tenant_id,
     )
 
 

@@ -38,6 +38,7 @@ async def list_recent_traces(
     limit: int = 50,
     service_name: str | None = None,
     status: str | None = None,
+    tenant_id: str | None = None,
 ) -> list[dict]:
     """
     Return the most recent traces (one row per unique trace_id).
@@ -56,6 +57,10 @@ async def list_recent_traces(
     if status:
         where_clauses.append("status = :status")
         params["status"] = status
+    if tenant_id:
+        # R7: scope traces to tenant (via attributes->>'tenant_id' in span data)
+        where_clauses.append("(attributes->>'tenant_id' = :tenant_id OR attributes IS NULL)")
+        params["tenant_id"] = tenant_id
 
     where = " AND ".join(where_clauses)
 
