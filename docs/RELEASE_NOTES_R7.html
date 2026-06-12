@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGLab R7 — Release Notes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0a0a0f;--surface:#111118;--card:#1c1c25;--elevated:#18181f;--gold:#d4a843;--gold-dim:rgba(212,168,67,.12);--text:#f0ede8;--muted:#9a9490;--dim:#5a5650;--green:#3ecf8e;--blue:#5e9cf5;--orange:#f0944d;--red:#f26464;--purple:#a78bfa;--teal:#2dd4bf;--border:rgba(212,168,67,.15);--border-hi:rgba(212,168,67,.45);--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;--ui:'Space Mono',monospace}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7;min-height:100vh}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(212,168,67,.3);border-radius:3px}
+    .hero{background:linear-gradient(135deg,#0a0a0f 0%,#070a0f 60%,#0a070f 100%);border-bottom:1px solid var(--border);padding:64px 48px 48px;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(94,156,245,.07) 0%,transparent 55%),radial-gradient(ellipse at 20% 80%,rgba(62,207,142,.05) 0%,transparent 45%);pointer-events:none}
+    .hero-eyebrow{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);margin-bottom:16px}
+    .hero-title{font-family:var(--display);font-size:clamp(36px,5vw,64px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:16px}
+    .hero-title span{color:var(--blue)}
+    .hero-sub{font-size:15px;color:var(--muted);max-width:620px;margin-bottom:24px}
+    .v1-badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(94,156,245,.1));border:1px solid var(--gold);border-radius:8px;padding:8px 16px;margin-bottom:20px}
+    .v1-label{font-family:var(--display);font-size:20px;font-weight:800;color:var(--gold)}
+    .v1-desc{font-size:11px;color:var(--muted)}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:20px;font-family:var(--ui);font-size:11px;color:var(--dim)}
+    .hero-meta strong{color:var(--muted)}
+    .stats-bar{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+    .stat{flex:1;min-width:110px;padding:18px 20px;border-right:1px solid var(--border)}
+    .stat:last-child{border-right:none}
+    .stat-val{font-family:var(--display);font-size:26px;font-weight:800;line-height:1;margin-bottom:4px}
+    .stat-lbl{font-size:9px;color:var(--dim);font-family:var(--ui);text-transform:uppercase;letter-spacing:.1em}
+    .container{max-width:1080px;margin:0 auto;padding:0 48px 80px}
+    .section{padding:44px 0;border-bottom:1px solid var(--border)}
+    .section:last-child{border-bottom:none}
+    .sec-label{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+    .sec-title{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+    .sec-lead{font-size:13px;color:var(--muted);margin-bottom:24px;max-width:640px}
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;transition:border-color .15s}
+    .card:hover{border-color:var(--border-hi)}
+    .card-hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .card-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .card-name{font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:.06em}
+    .card-desc{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px}
+    .tag-row{display:flex;flex-wrap:wrap;gap:4px}
+    .tag{font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(212,168,67,.06);color:var(--dim);border:1px solid var(--border);font-family:var(--ui)}
+    table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px}
+    th{font-family:var(--ui);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface)}
+    td{padding:9px 12px;border-bottom:1px solid rgba(212,168,67,.05)}
+    tr:last-child td{border-bottom:none}
+    .pass-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-family:var(--ui);font-size:9px;background:rgba(62,207,142,.1);color:var(--green);border:1px solid rgba(62,207,142,.25)}
+    .fail-badge{background:rgba(242,100,100,.1);color:var(--red);border:1px solid rgba(242,100,100,.25)}
+    .cloud-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+    .cloud-card{flex:1;min-width:160px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+    .cloud-name{font-family:var(--display);font-size:16px;font-weight:700;margin-bottom:6px}
+    .cloud-items{font-size:10px;color:var(--muted);line-height:1.8}
+    .interview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+    .iq{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;padding:14px}
+    .iq-q{font-weight:600;font-size:12px;margin-bottom:6px}
+    .iq-a{font-size:11px;color:var(--muted);line-height:1.7}
+    .roadmap{display:flex;flex-direction:column}
+    .r-row{display:grid;grid-template-columns:100px 1fr;padding:12px 0;border-bottom:1px solid rgba(212,168,67,.06);align-items:start}
+    .r-tag{font-family:var(--ui);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;display:inline-block}
+    .done{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border-hi)}
+    .r-name{font-weight:600;font-size:12px;margin-bottom:2px}
+    .r-desc{font-size:11px;color:var(--muted)}
+    .footer{background:var(--surface);border-top:1px solid var(--border);padding:24px 48px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--dim);font-family:var(--ui)}
+    .footer a{color:var(--gold);text-decoration:none}
+    @media(max-width:640px){.hero,.container,.footer{padding-left:20px;padding-right:20px}.stats-bar{flex-direction:column}.stat{border-right:none;border-bottom:1px solid var(--border)}}
+  </style>
+</head>
+<body>
+<div class="hero">
+  <div class="hero-eyebrow">Release Notes · June 2026 · Final Release</div>
+  <h1 class="hero-title">RAGLab <span>R7</span></h1>
+  <p class="hero-sub">Auth + Multi-tenancy + GCP. Enterprise-ready. Tenant isolation enforced at every data layer, tested adversarially. Three identity providers. Tri-cloud.</p>
+  <div class="v1-badge">
+    <div class="v1-label">v1.0.0</div>
+    <div class="v1-desc">Platform complete · 7 releases · 13 services · 4 packages · tri-cloud · multi-tenant</div>
+  </div>
+  <div class="hero-meta">
+    <div><strong>raglab-common</strong> v0.3.0</div>
+    <div><strong>raglab-eval</strong> v0.2.0</div>
+    <div><strong>raglab-chunkers</strong> v0.6.0</div>
+    <div><strong>raglab-retrievers</strong> v0.6.0</div>
+    <div><strong>auth-service</strong> v0.2.0</div>
+    <div><strong>New tests</strong> 255</div>
+    <div><strong>Total passing</strong> 2,082</div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-val" style="color:var(--blue)">3</div><div class="stat-lbl">OIDC Providers</div></div>
+  <div class="stat"><div class="stat-val" style="color:var(--red)">39</div><div class="stat-lbl">Adversarial Tests</div></div>
+  <div class="stat"><div class="stat-val" style="color:var(--green)">10</div><div class="stat-lbl">Layers Enforced</div></div>
+  <div class="stat"><div class="stat-val" style="color:var(--gold)">3</div><div class="stat-lbl">Clouds</div></div>
+  <div class="stat"><div class="stat-val" style="color:var(--text)">2,082</div><div class="stat-lbl">Tests Passing</div></div>
+  <div class="stat"><div class="stat-val" style="color:var(--purple)">0</div><div class="stat-lbl">Black Boxes</div></div>
+</div>
+
+<div class="container">
+
+<div class="section">
+  <div class="sec-label">Architecture</div>
+  <div class="sec-title">What R7 Ships</div>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-hd"><div class="card-dot" style="background:var(--blue)"></div><div class="card-name" style="color:var(--blue)">auth-service v0.2.0</div></div>
+      <div class="card-desc">3 OIDC providers. JWT validated once at gateway, never downstream. Identity context propagated as trusted headers. Role hierarchy: ADMIN &gt; MEMBER &gt; VIEWER.</div>
+      <div class="tag-row"><span class="tag">Entra ID</span><span class="tag">Google</span><span class="tag">Cognito</span><span class="tag">JWKS cache + rotation</span></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-dot" style="background:var(--green)"></div><div class="card-name" style="color:var(--green)">Centralized TenantScope</div></div>
+      <div class="card-desc">Single enforcement point in raglab-common. ScopedQdrantClient, scoped_cache_key, scoped_storage_path. TenantContextMissing raises before any data op. Fail closed.</div>
+      <div class="tag-row"><span class="tag">with_tenant()</span><span class="tag">ContextVar</span><span class="tag">cross-tenant write blocked</span></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-dot" style="background:var(--red)"></div><div class="card-name" style="color:var(--red)">Adversarial Tests</div></div>
+      <div class="card-desc">39 tests explicitly attempt cross-tenant attacks across 10 layers. Every attack fails closed. SQL injection, path traversal, forged tokens, role escalation — all blocked.</div>
+      <div class="tag-row"><span class="tag">10 layers</span><span class="tag">39 adversarial tests</span><span class="tag">0 leaks</span></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-dot" style="background:var(--orange)"></div><div class="card-name" style="color:var(--orange)">GCP Activated</div></div>
+      <div class="card-desc">GKE Autopilot + Cloud SQL + Memorystore Redis + Artifact Registry. Workload Identity Federation (no static keys). GCS remote Terraform state. Tri-cloud: Azure + AWS + GCP.</div>
+      <div class="tag-row"><span class="tag">GKE Autopilot</span><span class="tag">WIF no static keys</span><span class="tag">GCS state</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-label">Tenant Isolation</div>
+  <div class="sec-title">Every Layer, Enforced Centrally</div>
+  <table>
+    <thead><tr><th>Layer</th><th>Mechanism</th><th>Enforced by</th><th>Attack attempted</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Qdrant search</td><td>Mandatory payload filter</td><td>ScopedQdrantClient</td><td>Search without context</td><td><span class="pass-badge">Raises before Qdrant called</span></td></tr>
+      <tr><td>Qdrant upsert</td><td>tenant_id in every payload</td><td>ScopedQdrantClient</td><td>Cross-tenant point write</td><td><span class="pass-badge">ValueError; Qdrant never called</span></td></tr>
+      <tr><td>Postgres</td><td>tenant_id on every row</td><td>Schema + queries</td><td>Missing tenant_id</td><td><span class="pass-badge">Non-nullable column rejects</span></td></tr>
+      <tr><td>Redis cache</td><td>raglab:{tenant_id}:embed:{sha}</td><td>scoped_cache_key()</td><td>50-tenant key collision test</td><td><span class="pass-badge">50 unique keys per text</span></td></tr>
+      <tr><td>Storage</td><td>{tenant_id}/{path}</td><td>scoped_storage_path()</td><td>No context → path forge</td><td><span class="pass-badge">Raises TenantContextMissing</span></td></tr>
+      <tr><td>RabbitMQ</td><td>tenant_id in IngestionMessage</td><td>Pipeline runner</td><td>Empty tenant_id</td><td><span class="pass-badge">Defaults to 'default'; no null</span></td></tr>
+      <tr><td>JWT</td><td>Gateway validates; 401 on fail</td><td>JWTValidatorMiddleware</td><td>No token / forged token</td><td><span class="pass-badge">401; health still accessible</span></td></tr>
+      <tr><td>Roles</td><td>ADMIN / MEMBER / VIEWER</td><td>require_role() Depends</td><td>viewer→ingest, member→admin</td><td><span class="pass-badge">403 with role name in detail</span></td></tr>
+      <tr><td>Identity headers</td><td>X-User-Id + X-Tenant-Id required</td><td>IdentityContext.from_headers()</td><td>Missing required headers</td><td><span class="pass-badge">ValueError before data access</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="sec-label">Tri-Cloud</div>
+  <div class="sec-title">Azure + AWS + GCP</div>
+  <div class="cloud-row">
+    <div class="cloud-card">
+      <div class="cloud-name" style="color:var(--blue)">Azure</div>
+      <div class="cloud-items">AKS + HPA + PDB<br>Redis HA (Sentinel)<br>Managed Identity<br>Key Vault secrets<br>Terraform v0.5.0</div>
+    </div>
+    <div class="cloud-card">
+      <div class="cloud-name" style="color:var(--orange)">AWS</div>
+      <div class="cloud-items">EKS + ElastiCache<br>S3 docs bucket<br>IRSA (no static keys)<br>Secrets Manager<br>Terraform v0.5.0</div>
+    </div>
+    <div class="cloud-card">
+      <div class="cloud-name" style="color:var(--green)">GCP</div>
+      <div class="cloud-items">GKE Autopilot<br>Cloud SQL + Memorystore<br>Artifact Registry<br>WIF (no static keys)<br>Terraform v0.3.0 new</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-label">Interview Angles</div>
+  <div class="sec-title">What R7 Unlocks</div>
+  <div class="interview-grid">
+    <div class="iq"><div class="iq-q">"How do you guarantee tenant isolation?"</div><div class="iq-a">Enforce at data layer, not UI. Single dependency (ScopedQdrantClient, scoped_cache_key, scoped_storage_path) that all services import. One missed filter per service → zero missed filters when enforcement is in the library. Test adversarially: 39 attacks, all fail closed.</div></div>
+    <div class="iq"><div class="iq-q">"Collection-per-tenant vs shared collection?"</div><div class="iq-a">At 800+ tenants: 800+ collections to manage. Shared collection + mandatory payload filter enforced centrally scales cleanly. Risk of missed filter mitigated by centralizing in ScopedQdrantClient — services can't forget what they never write.</div></div>
+    <div class="iq"><div class="iq-q">"Why validate JWT at the gateway?"</div><div class="iq-a">Single enforcement point. Downstream services trust gateway-injected headers — less duplication, fewer ways to get it wrong. Same principle as tracing (R6) and tenant scoping (R7): centralize the cross-cutting concern.</div></div>
+    <div class="iq"><div class="iq-q">"OIDC across three providers?"</div><div class="iq-a">One abstraction (OIDCProviderBase), three implementations. Provider-specific config, common token handling. Cloud-agnostic identity mirrors the storage/vector/LLM abstractions throughout the platform.</div></div>
+    <div class="iq"><div class="iq-q">"Nullable tenant fields from R1?"</div><div class="iq-a">Forward-compatible schema design. tenant_id as nullable stub from day one meant R7 activated isolation without a migration nightmare. Backward compat: 'default' tenant for existing data. Senior move: design for future constraints upfront.</div></div>
+    <div class="iq"><div class="iq-q">"How do you test security properties?"</div><div class="iq-a">Adversarially. Write tests that attempt the attack, not tests that verify the defense exists. 39 tests, each explicitly attempting a cross-tenant operation. Pass = attack fails closed. The test failing means security is broken.</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-label">7-Release Journey</div>
+  <div class="sec-title">Platform Complete</div>
+  <div class="roadmap">
+    <div class="r-row"><span class="r-tag done">R1 ✓</span><div><div class="r-name">Full Shell + Core Pipeline</div><div class="r-desc">13 services, TextChunker, DenseRetriever, async ingestion. 369 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R2 ✓</span><div><div class="r-name">Advanced Chunking + Cloud Storage</div><div class="r-desc">6 chunkers, S3 + Azure Blob. 564 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R3 ✓</span><div><div class="r-name">Retrieval Power + CI/CD</div><div class="r-desc">BM25, Hybrid, MMR, ReRanker, Compression. GitHub Actions. 796 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R4 ✓</span><div><div class="r-name">Graph RAG + Advanced Document Types</div><div class="r-desc">PDFImageChunker, TableStitchChunker, graph-service, GraphRetriever, D3.js Explorer, Terraform. 1,287 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R5 ✓</span><div><div class="r-name">Self-Healing RAG + Cost Efficiency</div><div class="r-desc">Embedding cache, raglab-eval, 3 heal gates, Healing Trace UI, Terraform Redis + HPA + IRSA. 1,558 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R6 ✓</span><div><div class="r-name">Observability / LLMOps</div><div class="r-desc">OTel instrumentation, 6 native D3.js views, integration + E2E test suites. 1,811 tests.</div></div></div>
+    <div class="r-row"><span class="r-tag done">R7 ✓</span><div><div class="r-name">Auth + Multi-tenancy + GCP</div><div class="r-desc">3 OIDC providers, centralized tenant enforcement, 39 adversarial tests, GKE + Cloud SQL + Memorystore. 2,082 tests.</div></div></div>
+  </div>
+</div>
+
+</div>
+<div class="footer">
+  <div>RAGLab v1.0.0 — Platform Complete · Built by <a href="https://tamalkundu.com">Tamal Kundu</a> · June 2026</div>
+  <div><a href="https://github.com/tamalkundu007/raglab">GitHub</a> · Python 3.12 · FastAPI · Pydantic v2 · LangGraph-ready · Tri-cloud</div>
+</div>
+</body>
+</html>

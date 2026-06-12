@@ -2,7 +2,8 @@
 
 > A fully configurable RAG Configuration Generator — microservices monorepo.
 
-[![Release](https://img.shields.io/badge/release-R6-5e9cf5)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-R7%20v1.0.0-d4a843)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-2082%20passing-3ecf8e)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://python.org)
 [![uv](https://img.shields.io/badge/package%20manager-uv-black)](https://docs.astral.sh/uv/)
 [![Ruff](https://img.shields.io/badge/linter-ruff-orange)](https://docs.astral.sh/ruff/)
@@ -33,7 +34,7 @@ raglab/
     ├── ui/                 # Control Panel + Graph Explorer + Healing Trace
     ├── graph/              # GraphRAG — entity extraction, NetworkX, Leiden [R4]
     ├── observability/      # OTel tracing + 6 views (trace/chunk/retrieval/cost/health) [R6]
-    └── auth/               # [R7] Authentication
+    └── auth/               # OIDC auth — Entra ID, Google, Cognito [R7]
 ```
 
 ## Release Status
@@ -46,7 +47,7 @@ raglab/
 | **R4** | Graph RAG + Advanced Document Types | ✅ Done |
 | **R5** | Self-Healing RAG + Cost Efficiency | ✅ Done |
 | **R6** | Observability + Full Testing | ✅ Done |
-| R7 | Auth + Multi-tenancy + GCS + GCP | 🔜 Next |
+| **R7** | Auth + Multi-tenancy + GCP — **v1.0.0 Platform Complete** | ✅ Done |
 
 ## R5 Active Components
 
@@ -56,13 +57,13 @@ raglab/
 | Retriever | DenseRetriever, BM25Retriever, HybridRetriever (RRF), MMRRetriever, ReRankerRetriever, CompressionRetriever, GraphRetriever | — (all 7 active) |
 | Vector Store | Qdrant | FAISS, ChromaDB, Pinecone |
 | LLM Provider | Azure OpenAI, OpenAI, Anthropic, Ollama | Vertex |
-| Storage | Local filesystem, S3, Azure Blob | GCS (R7) |
+| Storage | Local filesystem, S3, Azure Blob, GCS | ✅ All R7 |
 | Graph | NetworkX + Leiden community detection, graph-service v0.2.0 | Neo4j (optional R6+) |
 | Eval / Self-Healing | ChunkQualityScorer, RetrievalHealer, GroundednessChecker (raglab-eval v0.1.0) | — |
-| Cache | Redis embedding cache (hit_rate_pct ROI metric) | Semantic cache (R7) |
+| Cache | Redis embedding cache, tenant-scoped keys (raglab:{tenant}:embed:{sha}) | ✅ R7 |
 | Observability | OTel tracing, observability-service v0.2.0, 6 native D3.js views | — |
 | Testing | 1,811 tests: unit + integration (55) + E2E (68) | — |
-| Infrastructure | Azure AKS + AWS EKS (Terraform), HPA, PDB, Redis HA, IRSA | GCP GKE (R7) |
+| Infrastructure | Azure AKS + AWS EKS + GCP GKE (Terraform), HPA, PDB, Redis HA, IRSA, WIF | ✅ Tri-cloud R7 |
 
 ## Release Branches
 
@@ -75,10 +76,12 @@ Each release is a permanent snapshot branch for step-by-step demos and presentat
 | `release/r3` | 796 | + BM25, Hybrid RRF, MMR, ReRanker, Compression, Comparison UI, CI/CD |
 | `release/r4` | 1,287 | + Graph RAG, PDFImageChunker, TableStitchChunker, D3.js Explorer, Terraform |
 | `release/r5` | 1,558 | + Self-healing gates, raglab-eval, embedding cache, Healing Trace UI |
+| `release/r6` | 1,811 | + OTel tracing, 6 native D3.js observability views, integration + E2E suites |
+| `release/r7` | 2,082 | + Entra ID/Google/Cognito auth, multi-tenancy (10 layers, 39 adversarial tests), GCP GKE |
 
 ```bash
 git checkout release/r1   # demo R1
-git checkout release/r5   # current production state
+git checkout release/r7   # v1.0.0 — platform complete
 ```
 
 ## Quick Start

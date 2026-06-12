@@ -17,7 +17,7 @@ from raglab_retrievers.compression_retriever import CompressionRetriever
 from raglab_retrievers.graph_retriever import GraphRetriever
 from raglab_retrievers.factory import RetrieverFactory
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 __all__ = [
     "BaseRetriever", "RetrieverFactory",
