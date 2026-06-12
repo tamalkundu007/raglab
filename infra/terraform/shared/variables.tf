@@ -157,3 +157,35 @@ variable "pdb_min_available" {
   description = "Minimum available pods during voluntary disruptions"
   default     = "50%"
 }
+
+# ── GCP (R7) ──────────────────────────────────────────────────────────────────
+
+variable "gcp_project_id" {
+  type        = string
+  description = "GCP project ID"
+  default     = ""
+}
+
+variable "gcp_region" {
+  type        = string
+  description = "GCP region (e.g. us-central1)"
+  default     = "us-central1"
+}
+
+variable "gke_autopilot" {
+  type        = bool
+  description = "Use GKE Autopilot (serverless node management)"
+  default     = true
+}
+
+variable "memorystore_tier" {
+  type        = string
+  description = "Memorystore Redis tier: BASIC or STANDARD_HA"
+  default     = "BASIC"
+}
+
+variable "cloud_sql_tier" {
+  type        = string
+  description = "Cloud SQL instance tier"
+  default     = "db-f1-micro"
+}

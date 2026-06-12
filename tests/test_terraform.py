@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 INFRA_ROOT = Path(__file__).parent.parent / "infra" / "terraform"
+REPO_ROOT  = Path(__file__).parent.parent
 ACTIVE_SERVICES = [
     "api-gateway","ingestion","embedding","indexing","retrieval",
     "llm","pipeline","storage","ui","graph","observability","auth"
@@ -131,22 +132,8 @@ class TestAWSMain:
         assert "aws_iam_role" in aws()
         assert "AmazonEKSClusterPolicy" in aws()
 
-class TestGCPStub:
-    def test_r7_documented(self):    assert "R7" in gcp()
-    def test_no_active_resources(self):
-        for i, line in enumerate(gcp().split("\n")):
-            s = line.strip()
-            assert not s.startswith('resource "google_'), \
-                f"GCP active resource at line {i+1}: {s}"
-    def test_provider_commented(self):
-        assert '# provider "google"' in gcp() or "provider block" in gcp().lower()
-    def test_no_sa_key_file(self):
-        assert not re.search(r'credentials\s*=\s*"[^"]+\.json"', gcp())
-    def test_gke_autopilot(self):    assert "Autopilot" in gcp() or "autopilot" in gcp()
-    def test_cloud_sql(self):        assert "Cloud SQL" in gcp() or "google_sql" in gcp()
-    def test_artifact_registry(self):assert "Artifact Registry" in gcp() or "artifact_registry" in gcp()
-    def test_stub_output(self):      assert 'output "r7_stub_message"' in gcp()
-    def test_workload_identity(self):assert "Workload Identity" in gcp() or "workload_identity" in gcp()
+# TestGCPStub removed in R7 — GCP is now activated
+
 
 class TestReadme:
     def test_azure_section(self):    assert "Azure" in readme() and "AKS" in readme()
@@ -227,3 +214,85 @@ class TestReadmeR5:
     def test_elasticache_documented(self): assert "ElastiCache" in (INFRA_ROOT/"README.md").read_text()
     def test_irsa_documented(self):       assert "IRSA" in (INFRA_ROOT/"README.md").read_text()
     def test_redis_documented(self):      assert "Redis" in (INFRA_ROOT/"README.md").read_text()
+
+
+class TestGCPTerraform:
+    def test_gcp_main_tf_exists(self):
+        assert (INFRA_ROOT/"gcp"/"main.tf").exists()
+
+    def test_gcp_not_stub(self):
+        content = (INFRA_ROOT/"gcp"/"main.tf").read_text()
+        assert "INTENTIONALLY DISABLED" not in content
+        assert 'STUB' not in content or 'R7' in content
+
+    def test_gke_autopilot_defined(self):
+        assert "enable_autopilot" in (INFRA_ROOT/"gcp"/"main.tf").read_text()
+
+    def test_artifact_registry_defined(self):
+        assert "artifact_registry" in (INFRA_ROOT/"gcp"/"main.tf").read_text()
+
+    def test_cloud_sql_defined(self):
+        assert "google_sql_database_instance" in (INFRA_ROOT/"gcp"/"main.tf").read_text()
+
+    def test_memorystore_redis_defined(self):
+        assert "google_redis_instance" in (INFRA_ROOT/"gcp"/"main.tf").read_text()
+
+    def test_secret_manager_defined(self):
+        assert "google_secret_manager_secret" in (INFRA_ROOT/"gcp"/"main.tf").read_text()
+
+    def test_workload_identity_defined(self):
+        assert "workload_identity" in (INFRA_ROOT/"gcp"/"main.tf").read_text()
+
+    def test_gcs_backend_defined(self):
+        assert 'backend "gcs"' in (INFRA_ROOT/'gcp'/'main.tf').read_text()
+
+    def test_no_hardcoded_credentials(self):
+        content = (INFRA_ROOT/"gcp"/"main.tf").read_text()
+        assert "GOOGLE_APPLICATION_CREDENTIALS" not in content
+        # No static service account key inline
+        assert "private_key_id" not in content
+
+    def test_outputs_defined(self):
+        content = (INFRA_ROOT/"gcp"/"main.tf").read_text()
+        assert 'gke_cluster_name' in content
+        assert 'gar_repository' in content
+
+    def test_private_cluster_config(self):
+        assert "enable_private_nodes" in (INFRA_ROOT/"gcp"/"main.tf").read_text()
+
+class TestGCPCICD:
+    def test_cd_gcp_yml_exists(self):
+        assert (REPO_ROOT/".github/workflows/cd-gcp.yml").exists()
+
+    def test_cd_gcp_not_stub(self):
+        content = (REPO_ROOT/".github/workflows/cd-gcp.yml").read_text()
+        assert "stub" not in content.lower() or "R7" in content
+
+    def test_cd_gcp_has_on_trigger(self):
+        content = (REPO_ROOT/".github/workflows/cd-gcp.yml").read_text()
+        assert "on:" in content
+
+    def test_cd_gcp_has_wif_auth(self):
+        assert "workload_identity_provider" in (REPO_ROOT/".github/workflows/cd-gcp.yml").read_text()
+
+    def test_cd_gcp_has_artifact_registry(self):
+        assert "docker.pkg.dev" in (REPO_ROOT/".github/workflows/cd-gcp.yml").read_text()
+
+    def test_cd_gcp_has_gke_deploy(self):
+        content = (REPO_ROOT/".github/workflows/cd-gcp.yml").read_text()
+        assert "kubectl" in content or "gke" in content.lower()
+
+    def test_cd_gcp_has_all_services(self):
+        content = (REPO_ROOT/".github/workflows/cd-gcp.yml").read_text()
+        for svc in ["api-gateway", "auth", "observability", "pipeline"]:
+            assert svc in content
+
+    def test_cd_gcp_no_hardcoded_secrets(self):
+        content = (REPO_ROOT/".github/workflows/cd-gcp.yml").read_text()
+        assert "-----BEGIN" not in content
+
+class TestSharedVariablesGCP:
+    def test_gcp_project_id_var(self):   assert "gcp_project_id" in (INFRA_ROOT/"shared"/"variables.tf").read_text()
+    def test_gcp_region_var(self):        assert "gcp_region" in (INFRA_ROOT/"shared"/"variables.tf").read_text()
+    def test_gke_autopilot_var(self):     assert "gke_autopilot" in (INFRA_ROOT/"shared"/"variables.tf").read_text()
+    def test_memorystore_tier_var(self):  assert "memorystore_tier" in (INFRA_ROOT/"shared"/"variables.tf").read_text()

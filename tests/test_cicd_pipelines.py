@@ -324,12 +324,13 @@ class TestAWSCDWorkflow:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class TestGCPStubWorkflow:
-    def test_no_active_triggers(self):
-        """GCP workflow must NOT have on: triggers until R7."""
+    def test_has_active_triggers(self):
+        """R7: GCP workflow is now activated — must have on: triggers."""
         wf = cd_gcp()
-        on = wf.get("on")
-        assert on is None or on == {} or on is False, \
-            f"GCP has active triggers: {on!r} — must be disabled until R7"
+        # PyYAML parses 'on:' as boolean True key
+        on = wf.get(True) or wf.get("on")
+        assert on is not None and on != {}, \
+            "GCP workflow must have active triggers in R7"
 
     def test_documents_r7(self):
         assert "R7" in read_file(WORKFLOWS_DIR / "cd-gcp.yml")
@@ -340,8 +341,10 @@ class TestGCPStubWorkflow:
             if "stub" in job_name.lower():
                 assert job.get("if") == False or str(job.get("if")).lower() == "false"
 
-    def test_documents_cloud_run(self):
-        assert "Cloud Run" in read_file(WORKFLOWS_DIR / "cd-gcp.yml")
+    def test_documents_gke(self):
+        """R7 uses GKE (not Cloud Run) — verify GKE referenced."""
+        content = read_file(WORKFLOWS_DIR / "cd-gcp.yml")
+        assert "gke" in content.lower() or "kubectl" in content.lower()
 
     def test_uses_workload_identity_not_static_key(self):
         content = read_file(WORKFLOWS_DIR / "cd-gcp.yml")
